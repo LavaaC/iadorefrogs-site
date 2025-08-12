@@ -202,3 +202,20 @@ body{
   image-rendering: pixelated;
   display: block;
 }
+
+.window { position: absolute; z-index: 100; }
+.window .titlebar { position: relative; user-select: none; }
+.window .controls {
+  position: absolute; right: 6px; top: 4px;
+  display: flex; gap: 6px;
+  z-index: 9999;           /* keep on top inside window */
+  pointer-events: auto;
+}
+.window .controls .btn {
+  display: inline-grid; place-items: center;
+  width: 22px; height: 18px; line-height: 16px;
+  border: 1px solid #000; background: #c0c0c0;
+  cursor: pointer; user-select: none; pointer-events: auto;
+}
+.window .controls .btn:active { filter: brightness(0.95); }
+#icons { position: relative; z-index: 1; } /* icons behind windows */

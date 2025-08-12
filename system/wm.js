@@ -1,6 +1,6 @@
 // Simple window manager: open/minimize/close + dragging + task buttons
 (() => {
-  const $  = (s, r=document) => r.querySelector(s);
+  const $ = (s, r=document) => r.querySelector(s);
   let z = 10;
   const tasks = $("#tasks");
 
@@ -24,28 +24,41 @@
     tasks.appendChild(b);
   }
 
+  function stop(e){ e.preventDefault(); e.stopPropagation(); }
+
   function attachWindowControls(win){
     const closeBtn = win.querySelector("[data-close]");
     const minBtn   = win.querySelector("[data-min]");
-    if (closeBtn) closeBtn.onclick = (e)=>{ e.stopPropagation(); closeWindow(win); };
-    if (minBtn)   minBtn.onclick   = (e)=>{ e.stopPropagation(); minimizeWindow(win); };
+
+    if (minBtn){
+      ["pointerdown","mousedown"].forEach(ev => minBtn.addEventListener(ev, stop));
+      minBtn.addEventListener("click", (e)=>{ stop(e); minimizeWindow(win); });
+    }
+    if (closeBtn){
+      ["pointerdown","mousedown"].forEach(ev => closeBtn.addEventListener(ev, stop));
+      closeBtn.addEventListener("click", (e)=>{ stop(e); closeWindow(win); });
+    }
+
     win.addEventListener("mousedown", ()=> { bringToFront(win); setActiveTask(win, true); });
   }
 
   function makeDraggable(win){
     const h = win.querySelector(".titlebar");
     if (!h) return;
-    let d=false,sx=0,sy=0,ox=0,oy=0;
+    let dragging=false,sx=0,sy=0,ox=0,oy=0;
+
     h.addEventListener("pointerdown", e=>{
-      d=true; h.setPointerCapture(e.pointerId);
+      // IMPORTANT: don't start drag when clicking the controls
+      if (e.target.closest(".controls")) return;
+      dragging=true; h.setPointerCapture(e.pointerId);
       const r=win.getBoundingClientRect(); sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
     });
     h.addEventListener("pointermove", e=>{
-      if(!d) return;
+      if(!dragging) return;
       win.style.left = Math.max(0, ox+(e.clientX-sx))+"px";
       win.style.top  = Math.max(0, oy+(e.clientY-sy))+"px";
     });
-    h.addEventListener("pointerup", ()=> d=false);
+    h.addEventListener("pointerup", ()=> dragging=false);
   }
 
   function openWindow(win){
