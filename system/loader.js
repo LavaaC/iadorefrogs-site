@@ -202,6 +202,8 @@
 
     // Expose site config for other modules (admin/chat)
     window.__SITE__ = site;
+    document.dispatchEvent(new CustomEvent("site:ready", { detail: site }));
+
   }
 
   loadSite().catch(console.error);

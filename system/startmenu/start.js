@@ -14,6 +14,7 @@
   let open = false;
   const btn = $("#btn-start");
   const state = { loggedIn: false, me: null, userTier: "guest" };
+  document.addEventListener("site:ready", () => render());
 
   // Show admin options if user is devmode, or (on GitHub Pages) when site.devMode === true
   function canAdmin() {
