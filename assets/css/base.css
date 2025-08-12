@@ -126,25 +126,24 @@ body{
   margin-left:auto;
 }
 
-/* Quick Launch strip (left of tabs) */
-/* Quick Launch strip (flush, full-height squares) */
+/* Quick Launch strip (perfectly centered icons) */
 .quick{
-  display:flex; align-items:stretch; gap:0;
-  margin:0; padding:0;               /* flush with Start and tabs */
+  display:flex; align-items:stretch; gap:0; margin:0; padding:0;
 }
 .quick .ql{
-  display:inline-grid; place-items:center;
   width: var(--taskbar-height);
   height: var(--taskbar-height);
+  box-sizing: border-box;           /* include borders in the square */
+  display:flex; align-items:center; justify-content:center;
+  padding:0; margin:0;
   border:2px outset var(--border-light);
   background:var(--win);
   cursor:pointer;
 }
 .quick .ql:active{ border:2px inset var(--border-light); }
-.quick .ql + .ql{ margin-left: 0; }   /* no gaps between pins */
-.quick .ql-img{ width:16px; height:16px; image-rendering:pixelated; }
-
-
+.quick .ql-img{
+  width:16px; height:16px; display:block; image-rendering:pixelated;
+}
 
 /* Windows */
 .window{

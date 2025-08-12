@@ -82,6 +82,8 @@
 
     // Extra guard against any accidental double add to DESKTOP
     const desktopAdded = new Set();
+    const seenTitles = new Set();
+
 
     // 9) Build Desktop + Quick Launch
     for (const id of ordered){
@@ -90,7 +92,10 @@
       const title  = meta.title || id;
       const iconRes = resolveIcon(id, meta.icon, title, site.appsAssetsBase);
 
-      if (!hidden.has(id) && !desktopAdded.has(id)) {
+      const normTitle = String(title).trim().toLowerCase();
+      if (!hidden.has(id) && !desktopAdded.has(id) && !seenTitles.has(normTitle)) {
+        seenTitles.add(normTitle);
+
         desktopAdded.add(id);
         const ic = document.createElement("div");
         ic.className = "icon";
