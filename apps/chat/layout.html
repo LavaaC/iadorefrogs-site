@@ -1,4 +1,20 @@
-<div class="ph" style="padding:12px;font-family:sans-serif">
-  <h3 style="margin:0 0 8px 0">Placeholder</h3>
-  <p>Content for this app will go here.</p>
+<div class="chat-wrap">
+  <div class="chat-sidebar">
+    <div class="chat-rooms">
+      <div class="rooms-title">Rooms</div>
+      <div id="chat-rooms"></div>
+      <div class="rooms-actions">
+        <input id="chat-new-name" placeholder="new-room-name">
+        <button id="chat-new-btn">Create</button>
+      </div>
+    </div>
+  </div>
+  <div class="chat-main">
+    <div id="chat-room-title" class="room-title">public</div>
+    <div id="chat-log" class="chat-log"></div>
+    <div class="chat-input">
+      <input id="chat-text" placeholder="Type a message…">
+      <button id="chat-send">Send</button>
+    </div>
+  </div>
 </div>

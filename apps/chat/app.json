@@ -1,1 +1,10 @@
-{"id":"chat","title":"Chat","icon":"icon.png","access":"verified","size":{"w":520},"pos":{"x":260,"y":60},"toolbar":"Messages later"}
+{
+  "id": "chat",
+  "title": "Chat",
+  "icon": "icon.png",
+  "access": "verified",
+  "hideIfNoAccess": false,
+  "size": { "w": 640 },
+  "pos": { "x": 220, "y": 80 },
+  "toolbar": "Public and custom rooms"
+}

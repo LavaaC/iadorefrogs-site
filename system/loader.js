@@ -1,7 +1,9 @@
-// Loader: wallpaper, desktop icons (image-only), per-user order/show/pin, devMode access, Quick Launch
+// Loader: wallpaper, icons, per-user prefs, Admin overrides, Devmode tier, Quick Launch
 (() => {
   const $ = (s, r=document) => r.querySelector(s);
-  const tiers = ["guest","unverified","verified","closefriend","gf"];
+
+  // NOTE: devmode is the highest tier
+  const tiers = ["guest","unverified","verified","closefriend","devmode"];
   const canAccess = (u, a) => tiers.indexOf(u) >= tiers.indexOf(a);
 
   const getJSON = (u) => fetch(u,{cache:"no-cache"}).then(r=>{ if(!r.ok) throw new Error(u+" "+r.status); return r.json(); });
@@ -14,27 +16,22 @@
     return { html:`<img src="${path}" alt="${title}" class="desk-icon-img">`, path };
   }
 
-  // prevent double-open per app
-  const opening = new Set();
+  const opening = new Set(); // per-app open lock
 
   async function loadSite(){
-    // 1) Config
-    let site = { wallpaper:null, appsAssetsBase:"assets/apps", devTier:null, devMode:true, defaultOrder:[] };
+    // Site config
+    let site = { wallpaper:null, appsAssetsBase:"assets/apps", devTier:null, devMode:true, defaultOrder:[], apiBase:"" };
     try { site = Object.assign(site, await getJSON("config/site.json")); } catch {}
 
-    // 1a) Robust wallpaper: always include a color fallback so it never turns pure white
-    if (site.wallpaper) {
-      const url = site.wallpaper;
-      document.body.style.background = `#008080 url('${url}') center / cover no-repeat fixed`;
-    }
+    // Strong wallpaper (never white if image missing)
+    if (site.wallpaper) document.body.style.background = `#008080 url('${site.wallpaper}') center / cover no-repeat fixed`;
 
-    // 2) Containers
     const desktopIcons = document.createElement("div");
     desktopIcons.id = "icons";
     $("#desktop").appendChild(desktopIcons);
     const quick = $("#quick");
 
-    // 3) Load & normalize app IDs (kills "Info" vs "info" vs "info " duplicates)
+    // Apps list (normalize ids; remove dup IDs)
     const rawList = await getJSON("apps/apps.json");
     const firstByNorm = new Map();
     for (const raw of rawList) {
@@ -43,18 +40,34 @@
     }
     const list = Array.from(firstByNorm.values());
 
-    // 4) App metadata
+    // Load metas
     const metas = {};
     for (const id of list) {
       try { metas[id] = await getJSON(`apps/${id}/app.json`); }
       catch { metas[id] = { title:id }; }
     }
 
-    // 5) Tier (devMode unlocks everything on GH Pages)
+    // Tier (Pages dev preview uses devMode to unlock admin; Pi will set actual tier)
     let userTier = window.__USER_TIER__ || site.devTier || "guest";
     document.addEventListener("auth:me", (ev)=>{ userTier = ev.detail?.tier || "guest"; });
 
-    // 6) Order helpers
+    // Admin overrides (GLOBAL) — from API on Pi, localStorage on GH
+    const usingGitHub = location.hostname.endsWith("github.io");
+    const useApi = !!site.apiBase && !usingGitHub;
+    let admin = { order:[], hidden:[], pinned:[], perApp:{} };
+    try {
+      if (useApi) {
+        admin = await getJSON(`${site.apiBase}/admin/settings`);
+      } else {
+        admin = JSON.parse(localStorage.getItem("frogs_admin") || "{}");
+      }
+    } catch {}
+    admin.order  = Array.isArray(admin.order)  ? admin.order  : [];
+    admin.hidden = Array.isArray(admin.hidden) ? admin.hidden : [];
+    admin.pinned = Array.isArray(admin.pinned) ? admin.pinned : [];
+    admin.perApp = admin.perApp || {}; // { appId: {access:"verified", hideIfNoAccess:true} }
+
+    // Helper to map order arrays (normalize ids, keep if present)
     const mapOrder = (arr)=>{
       const out = [], seen = new Set();
       for (const raw of arr||[]) {
@@ -64,72 +77,85 @@
       }
       return out;
     };
-    const baseOrder = (site.defaultOrder?.length) ? mapOrder(site.defaultOrder) : list.slice();
 
-    // 7) Per-user prefs
+    const baseOrder = (site.defaultOrder?.length ? mapOrder(site.defaultOrder) : list.slice());
+    const adminOrder = mapOrder(admin.order);
+
+    // Per-user prefs (for GH preview or personal tweaks)
     const meName = (window.__ME__ && window.__ME__.username) || "guest";
-    const key = `frogs_prefs_${meName}`;
-    const prefs = JSON.parse(localStorage.getItem(key) || "{}");
+    const keyUser = `frogs_prefs_${meName}`;
+    const prefs = JSON.parse(localStorage.getItem(keyUser) || "{}");
     const userOrder = Array.isArray(prefs.order) ? mapOrder(prefs.order) : null;
-    const hidden = new Set(Array.isArray(prefs.hidden) ? prefs.hidden : []);
-    const pinned = new Set(Array.isArray(prefs.pinned) ? prefs.pinned : []);
+    const userHidden = new Set(Array.isArray(prefs.hidden) ? prefs.hidden : []);
+    const userPinned = new Set(Array.isArray(prefs.pinned) ? prefs.pinned : []);
 
-    // 8) Final order (user first, then fill)
+    // Final order priority: Admin → Site default → list
     const seen = new Set();
-    const ordered = (userOrder || baseOrder).concat(baseOrder).filter(id => {
-      if (seen.has(id)) return false; seen.add(id); return true;
-    });
+    const ordered = adminOrder.concat(baseOrder).concat(list).filter(id => { if (seen.has(id)) return false; seen.add(id); return true; });
 
-    // Extra guard against any accidental double add to DESKTOP
+    // Dedupe by title too (avoid 2x "Info" visually)
     const desktopAdded = new Set();
     const seenTitles = new Set();
 
-
-    // 9) Build Desktop + Quick Launch
+    // Render
     for (const id of ordered){
       const meta = metas[id] || {};
-      const access = site.devMode ? "guest" : (meta.access || "guest");
+      const per = admin.perApp[id] || {};
       const title  = meta.title || id;
       const iconRes = resolveIcon(id, meta.icon, title, site.appsAssetsBase);
 
-      const normTitle = String(title).trim().toLowerCase();
-      if (!hidden.has(id) && !desktopAdded.has(id) && !seenTitles.has(normTitle)) {
-        seenTitles.add(normTitle);
+      // Access rule: admin override > app.json > default 'guest'
+      const required = per.access || meta.access || "guest";
+      // Hide flag: admin override; default false unless app.json has hideIfNoAccess
+      const hideIfNoAccess = per.hideIfNoAccess ?? !!meta.hideIfNoAccess;
 
-        desktopAdded.add(id);
+      // Determine effective visibility: Admin hidden OR per-user hidden
+      const globallyHidden = admin.hidden.includes(id);
+      const personallyHidden = userHidden.has(id);
+      const shouldSkipForHidden = globallyHidden || personallyHidden;
+
+      // Quick Launch pinned (admin or user)
+      const isPinned = admin.pinned.includes(id) || userPinned.has(id);
+
+      // Desktop icon visibility
+      const normTitle = String(title).trim().toLowerCase();
+      const allowed = canAccess(userTier, required);
+      const skipForAccess = (!allowed && hideIfNoAccess);
+
+      if (!shouldSkipForHidden && !skipForAccess && !desktopAdded.has(id) && !seenTitles.has(normTitle)) {
+        desktopAdded.add(id); seenTitles.add(normTitle);
+
         const ic = document.createElement("div");
         ic.className = "icon";
         ic.dataset.appId = id;
         ic.innerHTML = `<div class="icon-img">${iconRes.html || "🗂️"}</div><div class="label">${title}</div>`;
-        if (!canAccess(userTier, access)) { ic.style.opacity = "0.6"; ic.title = `Locked: requires ${access}`; }
-        desktopIcons.appendChild(ic);
-
+        if (!allowed) { ic.style.opacity = "0.6"; ic.title = `Locked: requires ${required}`; }
+        $("#icons").appendChild(ic);
         ic.addEventListener("click", async ()=>{
           if (ic.dataset.busy === "1") return;
           ic.dataset.busy = "1";
-          try { await openApp(id, meta, iconRes, access, title); }
+          try { await openApp(id, meta, iconRes, required, title); }
           finally { ic.dataset.busy = "0"; }
         });
       }
 
-      if (quick && pinned.has(id)) {
+      // Quick Launch
+      if (isPinned && $("#quick")) {
         const qi = document.createElement("button");
-        qi.className = "ql";
-        qi.title = title;
+        qi.className = "ql"; qi.title = title;
         qi.innerHTML = iconRes.path ? `<img src="${iconRes.path}" alt="" class="ql-img">` : "🗂️";
-        qi.addEventListener("click", ()=> openApp(id, meta, iconRes, access, title));
-        quick.appendChild(qi);
+        qi.addEventListener("click", ()=> openApp(id, meta, iconRes, required, title));
+        $("#quick").appendChild(qi);
       }
     }
 
-    async function openApp(id, meta, iconRes, access, title){
-      const tierNow = window.__USER_TIER__ || site.devTier || "guest";
-      const effAccess = site.devMode ? "guest" : (access || "guest");
-      if (!canAccess(tierNow, effAccess)) { alert(`Access denied. Requires: ${effAccess}`); return; }
-
+    async function openApp(id, meta, iconRes, required, title){
       const wid = `win-${id}`;
       const existing = document.getElementById(wid);
       if (existing){ WM.openWindow(existing); return; }
+
+      // Access check (devmode satisfies everything)
+      if (!canAccess(userTier, required)) { alert(`Access denied. Requires: ${required}`); return; }
 
       if (opening.has(id)) return;
       opening.add(id);
@@ -137,9 +163,7 @@
         if (document.getElementById(wid)) { WM.openWindow(`#${wid}`); return; }
 
         const w = document.createElement("div");
-        w.className = "window";
-        w.id = wid;
-        w.dataset.title = title;
+        w.className = "window"; w.id = wid; w.dataset.title = title;
         if (iconRes.path) w.dataset.icon = iconRes.path;
         const px = meta.pos?.x ?? 180, py = meta.pos?.y ?? 80, ww = meta.size?.w ?? 560;
         w.style.left = px+"px"; w.style.top = py+"px"; w.style.width = ww+"px";
@@ -156,9 +180,11 @@
 
         try {
           const html = await getText(`apps/${id}/layout.html`).catch(()=> getText(`apps/${id}/layout.htm`));
-          $(`#content-${id}`).innerHTML = html;
+          document.getElementById(`content-${id}`).innerHTML = html;
+          // Allow app-specific bootstraps (e.g., chat)
+          if (window.AppBoot && typeof window.AppBoot[id] === "function") window.AppBoot[id]({ site, id, meta, required });
         } catch {
-          $(`#content-${id}`).innerHTML = `<div class="ph"><div><div class="ph-box"></div><div class="ph-cap">Missing layout.html/htm</div></div></div>`;
+          document.getElementById(`content-${id}`).innerHTML = `<div class="ph"><div><div class="ph-box"></div><div class="ph-cap">Missing layout.html/htm</div></div></div>`;
         }
       } finally {
         opening.delete(id);
@@ -166,13 +192,16 @@
     }
 
     // Clock
-    function tick(){
+    const tick = ()=> {
       const d = new Date();
       const hh = String(d.getHours()).padStart(2,"0");
       const mm = String(d.getMinutes()).padStart(2,"0");
       const el = $("#clock"); if (el) el.textContent = `${hh}:${mm}`;
-    }
+    };
     tick(); setInterval(tick, 10000);
+
+    // Expose site config for other modules (admin/chat)
+    window.__SITE__ = site;
   }
 
   loadSite().catch(console.error);
