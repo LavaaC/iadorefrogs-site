@@ -48,3 +48,12 @@ body{
 .ph{display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:12px}
 .ph-box{height:100px; background:#e8e8e8; border:2px inset var(--border-mid)}
 .ph-cap{font-size:12px; color:#222}
+
+/* Make image icons fit the tile neatly */
+.tile-img{
+  max-width:100%;
+  max-height:100%;
+  image-rendering:pixelated;
+  display:block;
+}
+
