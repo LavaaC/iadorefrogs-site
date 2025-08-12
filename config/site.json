@@ -1,6 +1,6 @@
 {
-  "wallpaper": "/assets/wallpapers/frogs.jpg",
-  "appsAssetsBase": "/assets/apps",
+  "wallpaper": "assets/wallpapers/frogs.jpg",
+  "appsAssetsBase": "assets/apps",
   "appsOrder": [
     "info","map","photos","music","videogames","socials",
     "books","frogs","tierlist","chess","catloafs",
