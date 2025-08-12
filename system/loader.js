@@ -75,8 +75,34 @@
           WM.makeDraggable(w);
           WM.attachWindowControls(w);
 
-          // layout.html, fallback to layout.htm
+                   // layout.html, fallback to layout.htm
           let html = "";
-          try { html = await getText(`apps/${id}/layout.html`); }
-          catch(e1){
-            try { html = await getText
+          try {
+            html = await getText(`apps/${id}/layout.html`);
+          } catch (e1) {
+            try {
+              html = await getText(`apps/${id}/layout.htm`);
+            } catch (e2) {
+              html = `<div class="ph">
+                        <div><div class="ph-box"></div><div class="ph-cap">Missing layout.html/htm</div></div>
+                      </div>`;
+            }
+          }
+          document.getElementById(`content-${id}`).innerHTML = html;
+        }
+        WM.openWindow(w);
+      });
+    }
+
+    // Clock
+    function tick(){
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      document.getElementById("clock").textContent = `${hh}:${mm}`;
+    }
+    tick(); setInterval(tick, 10000);
+  }
+
+  loadSite().catch(err => console.error(err));
+})();
