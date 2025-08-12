@@ -202,7 +202,8 @@
 
     // Expose site config for other modules (admin/chat)
     window.__SITE__ = site;
-    document.dispatchEvent(new CustomEvent("site:ready", { detail: site }));
+    document.dispatchEvent(new CustomEvent("site:ready", { detail: site }));  // ← add this line
+
 
   }
 
