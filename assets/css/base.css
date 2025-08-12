@@ -1,0 +1,50 @@
+:root{
+  --bg: #008080;           /* fallback if no wallpaper */
+  --win: #c0c0c0;
+  --border-dark: #404040;
+  --border-mid:  #808080;
+  --border-light:#ffffff;
+  --title: #000080;
+  --title-text: #ffffff;
+  --shadow: rgba(0,0,0,.25);
+}
+
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg) center/cover no-repeat fixed;
+  font:14px/1.35 system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+  color:#000; user-select:none; overflow:hidden;
+}
+
+.desktop{position:relative; height:100%; width:100%; padding-bottom:34px; box-sizing:border-box}
+
+/* Desktop icons grid (built by loader.js) */
+#icons{display:grid; grid-template-columns:repeat(auto-fill, minmax(92px,1fr)); gap:18px; padding:16px; max-width:860px}
+.icon{display:flex; flex-direction:column; align-items:center; gap:6px; color:#fff; cursor:default}
+.tile{width:68px; height:52px; background:var(--win); box-shadow:inset -2px -2px 0 var(--border-dark), inset 2px 2px 0 var(--border-light), 4px 4px 0 var(--shadow); border:1px solid var(--border-mid); display:grid; place-items:center; font-weight:700; image-rendering:pixelated}
+.label{background:rgba(0,0,128,.35); padding:2px 6px; border-radius:4px; text-align:center}
+
+/* Taskbar */
+.taskbar{position:absolute; left:0; right:0; bottom:0; height:34px; background:var(--win); display:flex; align-items:center; gap:6px; padding:4px; box-shadow:0 -1px 0 var(--border-light) inset, 0 1px 0 var(--border-dark) inset}
+.start{display:flex; align-items:center; gap:6px; padding:3px 10px; background:var(--win); border:2px outset var(--border-light); cursor:pointer; font-weight:700}
+.start:active{border:2px inset var(--border-light)}
+.tasks{flex:1; display:flex; gap:6px; overflow:auto}
+.taskbtn{min-width:140px; padding:3px 8px; background:var(--win); border:2px outset var(--border-light); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer}
+.taskbtn.active{border:2px inset var(--border-light)}
+.status{color:#fff; padding:3px 8px; margin-left:auto}
+.clock{min-width:90px; text-align:center; padding:3px 6px; background:var(--win); border:2px inset var(--border-light)}
+
+/* Windows */
+.window{position:absolute; background:var(--win); border:2px solid var(--border-dark); outline:1px solid var(--border-light); box-shadow:6px 6px 0 var(--shadow); display:none; min-width:280px; max-width:min(94vw, 900px)}
+.titlebar{background:var(--title); color:var(--title-text); padding:4px 8px; display:flex; align-items:center; justify-content:space-between; cursor:grab}
+.title{font-weight:700}
+.controls{display:flex; gap:6px}
+.btn{width:18px; height:18px; background:var(--win); border:2px outset var(--border-light); display:grid; place-items:center; cursor:pointer}
+.btn:active{border:2px inset var(--border-light)}
+.toolbar{padding:6px; background:var(--win); border-bottom:2px outset var(--border-light)}
+.content{padding:10px; background:#fff; border-top:2px inset var(--border-mid); max-height:62vh; overflow:auto}
+
+/* Placeholder content */
+.ph{display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:12px}
+.ph-box{height:100px; background:#e8e8e8; border:2px inset var(--border-mid)}
+.ph-cap{font-size:12px; color:#222}
