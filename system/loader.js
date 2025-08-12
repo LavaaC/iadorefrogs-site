@@ -79,7 +79,18 @@
           w.querySelector("[data-min]").onclick   = ()=> WM.minimizeWindow(w);
 
           try {
-            const html = await getText(`apps/${id}/layout.html`);
+            let html = "";
+            try {
+              html = await getText(`apps/${id}/layout.html`);
+            } catch (e1) {
+              try {
+                html = await getText(`apps/${id}/layout.htm`);
+              } catch (e2) {
+                html = `<div class="ph">
+                          <div><div class="ph-box"></div><div class="ph-cap">Missing layout.html/htm</div></div>
+                        </div>`;
+              }
+            }
             document.getElementById(`content-${id}`).innerHTML = html;
           } catch(e) {
             document.getElementById(`content-${id}`).innerHTML =
