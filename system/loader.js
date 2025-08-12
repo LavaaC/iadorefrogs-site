@@ -1,4 +1,4 @@
-// Loader: sets wallpaper, builds icons, enforces tier access, opens windows (GH Pages + Pi) - compat version
+// Loader: wallpaper, desktop icons (image-only), tier access, open windows (GH Pages + Pi)
 (() => {
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var tiers = ["guest","unverified","verified","closefriend","gf"];
@@ -19,60 +19,10 @@
 
   function resolveIcon(id, icon, title, base){
     var isImg = icon && /\.(png|jpe?g|gif|svg|webp)$/i.test(icon);
-    if (!isImg) return { html: (icon || "🗂️") };
+    if (!isImg) return { html: (icon || "🗂️"), path: "" };
     var abs = /^(https?:)?\//.test(icon);
     var path = abs ? icon : (base + "/" + id + "/" + icon);
-    return { html: '<img src="'+path+'" alt="'+title+'" class="tile-img">', path: path };
-  }
-
-  // minimal taskbar helpers (work even if WM.attachWindowControls is missing)
-  function setActiveTask(win, on){
-    var t = document.getElementById("task-"+win.id);
-    if (t) t.classList.toggle("active", !!on);
-  }
-  function ensureTask(win){
-    var id = "task-"+win.id;
-    if (document.getElementById(id)) return;
-    var b = document.createElement("button");
-    b.className = "taskbtn";
-    b.id = id;
-    b.textContent = win.dataset.title || win.id;
-    b.onclick = function(){
-      var hidden = getComputedStyle(win).display === "none";
-      if (hidden) openWindow(win); else minimizeWindow(win);
-    };
-    $("#tasks").appendChild(b);
-  }
-  function attachControlsFallback(w){
-    var closeBtn = w.querySelector("[data-close]");
-    var minBtn   = w.querySelector("[data-min]");
-    if (closeBtn) closeBtn.onclick = function(e){ e.stopPropagation(); closeWindow(w); };
-    if (minBtn)   minBtn.onclick   = function(e){ e.stopPropagation(); minimizeWindow(w); };
-    w.addEventListener("mousedown", function(){
-      if (window.WM && WM.bringToFront) { WM.bringToFront(w); }
-      setActiveTask(w, true);
-    });
-  }
-  function openWindow(win){
-    if (typeof win === "string") win = document.querySelector(win);
-    if (!win) return;
-    win.style.display = "block";
-    if (window.WM && WM.bringToFront) WM.bringToFront(win);
-    ensureTask(win);
-    setActiveTask(win, true);
-  }
-  function minimizeWindow(win){
-    if (typeof win === "string") win = document.querySelector(win);
-    if (!win) return;
-    win.style.display = "none";
-    setActiveTask(win, false);
-  }
-  function closeWindow(win){
-    if (typeof win === "string") win = document.querySelector(win);
-    if (!win) return;
-    var task = document.getElementById("task-"+win.id);
-    if (task) task.remove();
-    win.remove();
+    return { html: '<img src="'+path+'" alt="'+title+'" class="desk-icon-img">', path: path };
   }
 
   function loadSite(){
@@ -84,7 +34,7 @@
     }).catch(function(){ /* keep defaults */ }).then(function(){
       if (site.wallpaper) document.body.style.backgroundImage = "url('"+site.wallpaper+"')";
 
-      // 2) Icons grid
+      // 2) Desktop icon grid
       var icons = document.createElement("div");
       icons.id = "icons";
       $("#desktop").appendChild(icons);
@@ -95,16 +45,16 @@
           ? site.appsOrder.filter(function(x){ return list.indexOf(x) !== -1; })
           : list.slice();
 
-        // 4) Tier from AUTH (on Pages, auth.js sets devTier)
+        // 4) Tier (on Pages, auth.js sets devTier)
         var userTier = (window.__USER_TIER__ || site.devTier || "guest");
         document.addEventListener("auth:me", function(ev){
           var t = ev && ev.detail ? ev.detail.tier : null;
           userTier = t || "guest";
         });
 
-        // 5) Build icons (sequential to keep logs tidy)
-        return ordered.reduce(function(promise, id){
-          return promise.then(function(){
+        // 5) Build desktop icons
+        return ordered.reduce(function(seq, id){
+          return seq.then(function(){
             return getJSON("apps/"+id+"/app.json").then(function(meta){
               var access = meta.access || "guest";
               var title  = meta.title  || id;
@@ -113,10 +63,13 @@
               var ic = document.createElement("div");
               ic.className = "icon";
               ic.dataset.appId = id;
-              ic.innerHTML = '<div class="tile">'+iconRes.html+'</div><div class="label">'+title+'</div>';
+              ic.innerHTML = `
+                <div class="icon-img">${iconRes.html || "🗂️"}</div>
+                <div class="label">${title}</div>
+              `;
 
               if (!canAccess(userTier, access)) {
-                ic.style.opacity = "0.5";
+                ic.style.opacity = "0.6";
                 ic.title = "Locked: requires " + access;
               }
               icons.appendChild(ic);
@@ -131,6 +84,8 @@
                   w.className = "window";
                   w.id = "win-"+id;
                   w.dataset.title = title;
+                  if (iconRes.path) w.dataset.icon = iconRes.path;
+
                   var px = meta.pos && typeof meta.pos.x !== "undefined" ? meta.pos.x : 180;
                   var py = meta.pos && typeof meta.pos.y !== "undefined" ? meta.pos.y : 80;
                   var ww = meta.size && typeof meta.size.w !== "undefined" ? meta.size.w : 560;
@@ -149,16 +104,19 @@
                     '<div class="content" id="content-'+id+'">Loading…</div>';
                   document.body.appendChild(w);
 
-                  // Dragging
+                  // Dragging + controls
                   if (window.WM && WM.makeDraggable) WM.makeDraggable(w);
-                  // Controls (works even if WM.attachWindowControls is missing)
                   if (window.WM && typeof WM.attachWindowControls === "function") {
                     WM.attachWindowControls(w);
                   } else {
-                    attachControlsFallback(w);
+                    // Fallback control wiring
+                    const closeBtn = w.querySelector("[data-close]");
+                    const minBtn = w.querySelector("[data-min]");
+                    if (minBtn) minBtn.onclick = () => WM.minimizeWindow(w);
+                    if (closeBtn) closeBtn.onclick = () => WM.closeWindow(w);
                   }
 
-                  // Load layout.html, fallback to layout.htm
+                  // Load layout.html (fallback to .htm)
                   getText("apps/"+id+"/layout.html").then(function(html){
                     $("#content-"+id).innerHTML = html;
                   }).catch(function(){
@@ -170,7 +128,7 @@
                     });
                   });
                 }
-                openWindow(w);
+                WM.openWindow(w);
               });
             }).catch(function(e){
               console.error("Failed to load app "+id+":", e.message);
@@ -182,7 +140,7 @@
       console.error("loadSite error:", e);
     });
 
-    // 6) Clock (always init)
+    // 6) Clock
     function tick(){
       var d = new Date();
       var hh = String(d.getHours()).padStart(2, "0");
@@ -193,6 +151,5 @@
     tick(); setInterval(tick, 10000);
   }
 
-  // Run
   try { loadSite(); } catch(e){ console.error(e); }
 })();

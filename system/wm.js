@@ -1,10 +1,16 @@
-// Simple window manager: open/minimize/close + dragging + task buttons
+// Window manager: task buttons with icons, open/minimize/close, dragging, active highlight
 (() => {
   const $ = (s, r=document) => r.querySelector(s);
   let z = 10;
   const tasks = $("#tasks");
 
-  function bringToFront(win){ win.style.zIndex = ++z; }
+  function bringToFront(win){
+    win.style.zIndex = ++z;
+    document.querySelectorAll(".window").forEach(w => w.classList.remove("active-window"));
+    win.classList.add("active-window");
+    setActiveTask(win, true);
+  }
+
   function setActiveTask(win, on){
     const t = document.getElementById("task-"+win.id);
     if (t) t.classList.toggle("active", !!on);
@@ -13,10 +19,18 @@
   function createTaskButton(win){
     const id = "task-"+win.id;
     if (document.getElementById(id)) return;
+
+    const iconSrc = win.dataset.icon || "";
     const b = document.createElement("button");
     b.className = "taskbtn";
     b.id = id;
-    b.textContent = win.dataset.title || win.id;
+
+    // Button content: small icon + title
+    b.innerHTML = `
+      ${iconSrc ? `<img class="taskicon" src="${iconSrc}" alt="" aria-hidden="true">` : `<span class="taskicon-fallback">🗂️</span>`}
+      <span class="tasklabel">${win.dataset.title || win.id}</span>
+    `;
+
     b.onclick = () => {
       const hidden = getComputedStyle(win).display === "none";
       if (hidden) openWindow(win); else minimizeWindow(win);
@@ -39,7 +53,7 @@
       closeBtn.addEventListener("click", (e)=>{ stop(e); closeWindow(win); });
     }
 
-    win.addEventListener("mousedown", ()=> { bringToFront(win); setActiveTask(win, true); });
+    win.addEventListener("mousedown", ()=> bringToFront(win));
   }
 
   function makeDraggable(win){
@@ -48,10 +62,11 @@
     let dragging=false,sx=0,sy=0,ox=0,oy=0;
 
     h.addEventListener("pointerdown", e=>{
-      // IMPORTANT: don't start drag when clicking the controls
+      // Don't start drag when clicking controls
       if (e.target.closest(".controls")) return;
       dragging=true; h.setPointerCapture(e.pointerId);
       const r=win.getBoundingClientRect(); sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
+      bringToFront(win);
     });
     h.addEventListener("pointermove", e=>{
       if(!dragging) return;
@@ -67,13 +82,13 @@
     win.style.display = "block";
     bringToFront(win);
     createTaskButton(win);
-    setActiveTask(win, true);
   }
 
   function minimizeWindow(win){
     if (typeof win === "string") win = document.querySelector(win);
     if (!win) return;
     win.style.display = "none";
+    win.classList.remove("active-window");
     setActiveTask(win, false);
   }
 
