@@ -5,9 +5,11 @@
   const tasks = $("#tasks");
 
   function bringToFront(win){
-    win.style.zIndex = ++z;
+    // deactivate others
     document.querySelectorAll(".window").forEach(w => w.classList.remove("active-window"));
+    // activate this one
     win.classList.add("active-window");
+    win.style.zIndex = ++z;
     setActiveTask(win, true);
   }
 
@@ -24,13 +26,10 @@
     const b = document.createElement("button");
     b.className = "taskbtn";
     b.id = id;
-
-    // Button content: small icon + title
     b.innerHTML = `
       ${iconSrc ? `<img class="taskicon" src="${iconSrc}" alt="" aria-hidden="true">` : `<span class="taskicon-fallback">🗂️</span>`}
       <span class="tasklabel">${win.dataset.title || win.id}</span>
     `;
-
     b.onclick = () => {
       const hidden = getComputedStyle(win).display === "none";
       if (hidden) openWindow(win); else minimizeWindow(win);
@@ -62,8 +61,7 @@
     let dragging=false,sx=0,sy=0,ox=0,oy=0;
 
     h.addEventListener("pointerdown", e=>{
-      // Don't start drag when clicking controls
-      if (e.target.closest(".controls")) return;
+      if (e.target.closest(".controls")) return; // don't drag from buttons
       dragging=true; h.setPointerCapture(e.pointerId);
       const r=win.getBoundingClientRect(); sx=e.clientX; sy=e.clientY; ox=r.left; oy=r.top;
       bringToFront(win);
@@ -80,8 +78,8 @@
     if (typeof win === "string") win = document.querySelector(win);
     if (!win) return;
     win.style.display = "block";
-    bringToFront(win);
     createTaskButton(win);
+    bringToFront(win); // <- ensures active on first open
   }
 
   function minimizeWindow(win){
@@ -99,7 +97,5 @@
     if (task) task.remove();
     win.remove();
   }
-
-  // expose
   window.WM = { openWindow, minimizeWindow, closeWindow, makeDraggable, bringToFront, attachWindowControls };
 })();
