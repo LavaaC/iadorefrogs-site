@@ -2,30 +2,30 @@
 (() => {
   const $ = (s, r=document) => r.querySelector(s);
   const tiers = ["guest","unverified","verified","closefriend","gf"];
-  const canAccess = (userTier, appTier) => tiers.indexOf(userTier) >= tiers.indexOf(appTier);
+  const canAccess = (u, a) => tiers.indexOf(u) >= tiers.indexOf(a);
 
   const getJSON = (u) => fetch(u,{cache:"no-cache"}).then(r=>{ if(!r.ok) throw new Error(u+" "+r.status); return r.json(); });
   const getText = (u) => fetch(u,{cache:"no-cache"}).then(r=>{ if(!r.ok) throw new Error(u+" "+r.status); return r.text(); });
 
   function resolveIcon(id, icon, title, base){
     const isImg = icon && /\.(png|jpe?g|gif|svg|webp)$/i.test(icon);
-    if (!isImg) return { html: (icon || "🗂️"), path: "" };
+    if (!isImg) return { html:(icon||"🗂️"), path:"" };
     const path = /^(https?:)?\//.test(icon) ? icon : `${base}/${id}/${icon}`;
-    return { html: `<img src="${path}" alt="${title}" class="desk-icon-img">`, path };
+    return { html:`<img src="${path}" alt="${title}" class="desk-icon-img">`, path };
   }
 
-  // very strong per-app open lock
+  // prevent double-open per app
   const opening = new Set();
 
   async function loadSite(){
     // 1) Config
     let site = { wallpaper:null, appsAssetsBase:"assets/apps", devTier:null, devMode:true, defaultOrder:[] };
-    try { site = Object.assign(site, await getJSON("config/site.json")); } catch(e){}
+    try { site = Object.assign(site, await getJSON("config/site.json")); } catch {}
 
-    // Force-set the wallpaper even if CSS shorthand background was set
+    // 1a) Robust wallpaper: always include a color fallback so it never turns pure white
     if (site.wallpaper) {
       const url = site.wallpaper;
-      document.body.style.background = `url('${url}') center / cover no-repeat fixed`;
+      document.body.style.background = `#008080 url('${url}') center / cover no-repeat fixed`;
     }
 
     // 2) Containers
@@ -34,42 +34,39 @@
     $("#desktop").appendChild(desktopIcons);
     const quick = $("#quick");
 
-    // 3) Apps list (normalize ids to prevent duplicates)
-    const listRaw = await getJSON("apps/apps.json");               // e.g., ["info","photos","Info", "map "]
-    const firstByNorm = new Map();                                  // normId -> originalId
-    for (const raw of listRaw) {
+    // 3) Load & normalize app IDs (kills "Info" vs "info" vs "info " duplicates)
+    const rawList = await getJSON("apps/apps.json");
+    const firstByNorm = new Map();
+    for (const raw of rawList) {
       const norm = String(raw).trim().toLowerCase();
       if (!firstByNorm.has(norm)) firstByNorm.set(norm, String(raw).trim());
     }
-    const list = Array.from(firstByNorm.values());                  // deduped, order-preserving
+    const list = Array.from(firstByNorm.values());
 
-    // 4) Load app metas
+    // 4) App metadata
     const metas = {};
     for (const id of list) {
       try { metas[id] = await getJSON(`apps/${id}/app.json`); }
       catch { metas[id] = { title:id }; }
     }
 
-    // 5) Tier (devMode unlocks everything on Pages)
+    // 5) Tier (devMode unlocks everything on GH Pages)
     let userTier = window.__USER_TIER__ || site.devTier || "guest";
     document.addEventListener("auth:me", (ev)=>{ userTier = ev.detail?.tier || "guest"; });
 
-    // 6) Base order from config or list (also normalized, then mapped back)
-    function mapOrder(arr){
-      const out = [];
-      const seen = new Set();
-      for (const raw of arr || []) {
+    // 6) Order helpers
+    const mapOrder = (arr)=>{
+      const out = [], seen = new Set();
+      for (const raw of arr||[]) {
         const norm = String(raw).trim().toLowerCase();
         const real = firstByNorm.get(norm);
         if (real && !seen.has(real)) { out.push(real); seen.add(real); }
       }
       return out;
-    }
-    const baseOrder = (site.defaultOrder && site.defaultOrder.length)
-      ? mapOrder(site.defaultOrder)
-      : list.slice();
+    };
+    const baseOrder = (site.defaultOrder?.length) ? mapOrder(site.defaultOrder) : list.slice();
 
-    // 7) User prefs (order/show/pin)
+    // 7) Per-user prefs
     const meName = (window.__ME__ && window.__ME__.username) || "guest";
     const key = `frogs_prefs_${meName}`;
     const prefs = JSON.parse(localStorage.getItem(key) || "{}");
@@ -77,21 +74,24 @@
     const hidden = new Set(Array.isArray(prefs.hidden) ? prefs.hidden : []);
     const pinned = new Set(Array.isArray(prefs.pinned) ? prefs.pinned : []);
 
-    // 8) Final order (user first, then fill with any missing from base)
+    // 8) Final order (user first, then fill)
     const seen = new Set();
     const ordered = (userOrder || baseOrder).concat(baseOrder).filter(id => {
       if (seen.has(id)) return false; seen.add(id); return true;
     });
 
+    // Extra guard against any accidental double add to DESKTOP
+    const desktopAdded = new Set();
+
     // 9) Build Desktop + Quick Launch
     for (const id of ordered){
       const meta = metas[id] || {};
-      const access = site.devMode ? "guest" : (meta.access || "guest"); // dev: unlock all
+      const access = site.devMode ? "guest" : (meta.access || "guest");
       const title  = meta.title || id;
       const iconRes = resolveIcon(id, meta.icon, title, site.appsAssetsBase);
 
-      // Desktop icon (skip hidden => grid compacts)
-      if (!hidden.has(id)) {
+      if (!hidden.has(id) && !desktopAdded.has(id)) {
+        desktopAdded.add(id);
         const ic = document.createElement("div");
         ic.className = "icon";
         ic.dataset.appId = id;
@@ -107,7 +107,6 @@
         });
       }
 
-      // Quick-launch (independent of hidden; unpin in Customize to remove)
       if (quick && pinned.has(id)) {
         const qi = document.createElement("button");
         qi.className = "ql";

@@ -2,17 +2,20 @@
 (() => {
   const $ = (s, r=document) => r.querySelector(s);
 
-  const USERS_KEY = "frogs_users"; // [{username, pass, name, met, tier}]
-  const ME_KEY    = "frogs_me";    // {username, tier}
+  const USERS_KEY = "frogs_users";
+  const ME_KEY    = "frogs_me";
 
   function loadUsers(){ try { return JSON.parse(localStorage.getItem(USERS_KEY) || "[]"); } catch { return []; } }
   function saveUsers(arr){ localStorage.setItem(USERS_KEY, JSON.stringify(arr)); }
-  function setMe(me){ localStorage.setItem(ME_KEY, JSON.stringify(me||null)); window.__ME__ = me||null; window.__USER_TIER__ = me?.tier || "guest"; document.dispatchEvent(new CustomEvent("auth:me",{detail: me||{tier:"guest"}})); }
+  function setMe(me){
+    localStorage.setItem(ME_KEY, JSON.stringify(me||null));
+    window.__ME__ = me||null;
+    window.__USER_TIER__ = me?.tier || "guest";
+    document.dispatchEvent(new CustomEvent("auth:me",{detail: me||{tier:"guest"}}));
+  }
 
-  // restore session on load
   try{ const me = JSON.parse(localStorage.getItem(ME_KEY)||"null"); if (me) setTimeout(()=> setMe(me), 0); } catch {}
 
-  // status text
   function updateStatus(){
     const el = $("#auth-status");
     const me = window.__ME__;
@@ -21,7 +24,6 @@
   document.addEventListener("auth:me", updateStatus);
   updateStatus();
 
-  // Windows
   function openCreate(){
     let w = $("#win-auth-create");
     if (!w){
@@ -36,7 +38,7 @@
           <label>Confirm Password <input id="ca-pass2" type="password"></label><br>
           <label>Name I know you as <input id="ca-name"></label><br>
           <label>Date we met (mm/dd/yy) <input id="ca-met" placeholder="mm/dd/yy"></label><br>
-          <label><input id="ca-check" type="checkbox"> This is not my password for everything else because giving me that would be really dumb</label><br>
+          <label><input id="ca-check" type="checkbox"> This is not (your) password for everything else because giving me that would be really dumb</label><br>
           <button id="ca-submit">Create</button>
         </div>`;
       document.body.appendChild(w);
@@ -89,7 +91,6 @@
     WM.openWindow(w);
   }
 
-  // wire events from Start menu
   document.addEventListener("auth:openCreate", openCreate);
   document.addEventListener("auth:openLogin",  openLogin);
   document.addEventListener("auth:logout", ()=> setMe(null));
