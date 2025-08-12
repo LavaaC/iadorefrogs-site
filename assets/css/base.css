@@ -64,3 +64,23 @@ body{
 .window .titlebar{ position:relative; }
 .window .controls{ position:relative; z-index:2; }
 .window .controls .btn{ cursor:pointer; user-select:none; }
+
+
+/* Windows should float above icons */
+.window { position: absolute; z-index: 100; }
+
+/* Titlebar & control buttons – ensure click target exists */
+.window .titlebar { position: relative; user-select: none; }
+.window .controls { position: absolute; right: 6px; top: 4px; z-index: 2; display: flex; gap: 6px; }
+.window .controls .btn {
+  display: inline-block;
+  width: 22px; height: 18px; line-height: 16px;
+  text-align: center;
+  border: 1px solid #000;
+  background: #c0c0c0;
+  cursor: pointer; user-select: none;
+}
+.window .controls .btn:hover { filter: brightness(0.95); }
+
+/* If icons accidentally overlap, keep them behind windows */
+#icons { position: relative; z-index: 1; }
