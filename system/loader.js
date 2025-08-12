@@ -14,15 +14,19 @@
     return { html: `<img src="${path}" alt="${title}" class="desk-icon-img">`, path };
   }
 
-  // Strong open locks per app (prevents double windows)
+  // very strong per-app open lock
   const opening = new Set();
 
   async function loadSite(){
     // 1) Config
-    let site = { wallpaper:null, appsOrder:[], appsAssetsBase:"assets/apps", devTier:null, devMode:true, defaultOrder:[] };
+    let site = { wallpaper:null, appsAssetsBase:"assets/apps", devTier:null, devMode:true, defaultOrder:[] };
     try { site = Object.assign(site, await getJSON("config/site.json")); } catch(e){}
 
-    if (site.wallpaper) document.body.style.backgroundImage = `url('${site.wallpaper}')`;
+    // Force-set the wallpaper even if CSS shorthand background was set
+    if (site.wallpaper) {
+      const url = site.wallpaper;
+      document.body.style.background = `url('${url}') center / cover no-repeat fixed`;
+    }
 
     // 2) Containers
     const desktopIcons = document.createElement("div");
@@ -30,58 +34,72 @@
     $("#desktop").appendChild(desktopIcons);
     const quick = $("#quick");
 
-    // 3) Apps + meta
-    const listRaw = await getJSON("apps/apps.json");
-    const list = Array.from(new Set(listRaw)); // de-dup defensively
+    // 3) Apps list (normalize ids to prevent duplicates)
+    const listRaw = await getJSON("apps/apps.json");               // e.g., ["info","photos","Info", "map "]
+    const firstByNorm = new Map();                                  // normId -> originalId
+    for (const raw of listRaw) {
+      const norm = String(raw).trim().toLowerCase();
+      if (!firstByNorm.has(norm)) firstByNorm.set(norm, String(raw).trim());
+    }
+    const list = Array.from(firstByNorm.values());                  // deduped, order-preserving
+
+    // 4) Load app metas
     const metas = {};
     for (const id of list) {
       try { metas[id] = await getJSON(`apps/${id}/app.json`); }
       catch { metas[id] = { title:id }; }
     }
 
-    // 4) Tier (devMode unlocks everything on GH Pages)
+    // 5) Tier (devMode unlocks everything on Pages)
     let userTier = window.__USER_TIER__ || site.devTier || "guest";
     document.addEventListener("auth:me", (ev)=>{ userTier = ev.detail?.tier || "guest"; });
 
-    // 5) Base order from config or list
+    // 6) Base order from config or list (also normalized, then mapped back)
+    function mapOrder(arr){
+      const out = [];
+      const seen = new Set();
+      for (const raw of arr || []) {
+        const norm = String(raw).trim().toLowerCase();
+        const real = firstByNorm.get(norm);
+        if (real && !seen.has(real)) { out.push(real); seen.add(real); }
+      }
+      return out;
+    }
     const baseOrder = (site.defaultOrder && site.defaultOrder.length)
-      ? site.defaultOrder.filter(x=>list.includes(x))
+      ? mapOrder(site.defaultOrder)
       : list.slice();
 
-    // 6) User prefs (order/show/pin)
+    // 7) User prefs (order/show/pin)
     const meName = (window.__ME__ && window.__ME__.username) || "guest";
     const key = `frogs_prefs_${meName}`;
     const prefs = JSON.parse(localStorage.getItem(key) || "{}");
-    const userOrder = Array.isArray(prefs.order) ? prefs.order.filter(x=>list.includes(x)) : null;
-    const hidden = new Set(prefs.hidden || []); // HIDE removes from Desktop (grid compacts naturally)
-    const pinned = new Set(prefs.pinned || []);
+    const userOrder = Array.isArray(prefs.order) ? mapOrder(prefs.order) : null;
+    const hidden = new Set(Array.isArray(prefs.hidden) ? prefs.hidden : []);
+    const pinned = new Set(Array.isArray(prefs.pinned) ? prefs.pinned : []);
 
-    // 7) Final order (user first, then fill with any missing from base)
+    // 8) Final order (user first, then fill with any missing from base)
     const seen = new Set();
     const ordered = (userOrder || baseOrder).concat(baseOrder).filter(id => {
       if (seen.has(id)) return false; seen.add(id); return true;
     });
 
-    // 8) Build Desktop + Quick Launch
+    // 9) Build Desktop + Quick Launch
     for (const id of ordered){
       const meta = metas[id] || {};
       const access = site.devMode ? "guest" : (meta.access || "guest"); // dev: unlock all
       const title  = meta.title || id;
       const iconRes = resolveIcon(id, meta.icon, title, site.appsAssetsBase);
 
-      // Desktop icon (skip hidden so the grid compacts)
+      // Desktop icon (skip hidden => grid compacts)
       if (!hidden.has(id)) {
         const ic = document.createElement("div");
         ic.className = "icon";
         ic.dataset.appId = id;
         ic.innerHTML = `<div class="icon-img">${iconRes.html || "🗂️"}</div><div class="label">${title}</div>`;
-        if (!canAccess(userTier, access)) {
-          ic.style.opacity = "0.6"; ic.title = `Locked: requires ${access}`;
-        }
+        if (!canAccess(userTier, access)) { ic.style.opacity = "0.6"; ic.title = `Locked: requires ${access}`; }
         desktopIcons.appendChild(ic);
 
         ic.addEventListener("click", async ()=>{
-          // guard: ignore while opening
           if (ic.dataset.busy === "1") return;
           ic.dataset.busy = "1";
           try { await openApp(id, meta, iconRes, access, title); }
@@ -89,7 +107,7 @@
         });
       }
 
-      // Quick-launch (kept independent from hidden; uncheck "Pin" in Customize to remove)
+      // Quick-launch (independent of hidden; unpin in Customize to remove)
       if (quick && pinned.has(id)) {
         const qi = document.createElement("button");
         qi.className = "ql";
@@ -101,7 +119,6 @@
     }
 
     async function openApp(id, meta, iconRes, access, title){
-      // Access check (devMode → unlocked)
       const tierNow = window.__USER_TIER__ || site.devTier || "guest";
       const effAccess = site.devMode ? "guest" : (access || "guest");
       if (!canAccess(tierNow, effAccess)) { alert(`Access denied. Requires: ${effAccess}`); return; }
@@ -110,11 +127,9 @@
       const existing = document.getElementById(wid);
       if (existing){ WM.openWindow(existing); return; }
 
-      // strong per-app lock (covers desktop+quick simultaneous clicks)
       if (opening.has(id)) return;
       opening.add(id);
       try {
-        // double-check again just before creating
         if (document.getElementById(wid)) { WM.openWindow(`#${wid}`); return; }
 
         const w = document.createElement("div");
@@ -133,11 +148,8 @@
           <div class="content" id="content-${id}">Loading…</div>`;
         document.body.appendChild(w);
         if (window.WM){ WM.makeDraggable(w); WM.attachWindowControls(w); }
-
-        // Open immediately as active (lighter)
         WM.openWindow(w);
 
-        // Load layout (html → htm fallback)
         try {
           const html = await getText(`apps/${id}/layout.html`).catch(()=> getText(`apps/${id}/layout.htm`));
           $(`#content-${id}`).innerHTML = html;
