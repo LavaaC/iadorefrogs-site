@@ -1,49 +1,35 @@
-// Simple window manager: open/minimize/close + dragging + tasks
+// Simple window manager: open/minimize/close + dragging + task buttons
 (() => {
   const $  = (s, r=document) => r.querySelector(s);
-  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
   let z = 10;
   const tasks = $("#tasks");
 
   function bringToFront(win){ win.style.zIndex = ++z; }
-  function ensureTask(win){
-    const id = win.id;
-    if ($("#task-"+id)) return;
-    const b = document.createElement("button");
-    b.className = "taskbtn";
-    b.id = "task-"+id;
-    b.textContent = win.dataset.title || id;
-    b.onclick = () => {
-      if (getComputedStyle(win).display === "none") openWindow(win);
-      else minimizeWindow(win);
-    };
-    tasks.appendChild(b);
-  }
   function setActiveTask(win, on){
-    const t = $("#task-"+win.id);
+    const t = document.getElementById("task-"+win.id);
     if (t) t.classList.toggle("active", !!on);
   }
 
-  function openWindow(win){
-    if (typeof win === "string") win = document.querySelector(win);
-    if (!win) return;
-    win.style.display = "block";
-    bringToFront(win);
-    ensureTask(win);
-    setActiveTask(win, true);
+  function createTaskButton(win){
+    const id = "task-"+win.id;
+    if (document.getElementById(id)) return;
+    const b = document.createElement("button");
+    b.className = "taskbtn";
+    b.id = id;
+    b.textContent = win.dataset.title || win.id;
+    b.onclick = () => {
+      const hidden = getComputedStyle(win).display === "none";
+      if (hidden) openWindow(win); else minimizeWindow(win);
+    };
+    tasks.appendChild(b);
   }
-  function minimizeWindow(win){
-    if (typeof win === "string") win = document.querySelector(win);
-    if (!win) return;
-    win.style.display = "none";
-    setActiveTask(win, false);
-  }
-  function closeWindow(win){
-    if (typeof win === "string") win = document.querySelector(win);
-    if (!win) return;
-    win.remove(); // actually remove so it doesn't pile up
-    const t = $("#task-"+(win.id||""));
-    if (t) t.remove();
+
+  function attachWindowControls(win){
+    const closeBtn = win.querySelector("[data-close]");
+    const minBtn   = win.querySelector("[data-min]");
+    if (closeBtn) closeBtn.onclick = (e)=>{ e.stopPropagation(); closeWindow(win); };
+    if (minBtn)   minBtn.onclick   = (e)=>{ e.stopPropagation(); minimizeWindow(win); };
+    win.addEventListener("mousedown", ()=> { bringToFront(win); setActiveTask(win, true); });
   }
 
   function makeDraggable(win){
@@ -62,6 +48,30 @@
     h.addEventListener("pointerup", ()=> d=false);
   }
 
-  // public API on window
-  window.WM = { openWindow, minimizeWindow, closeWindow, makeDraggable, bringToFront };
+  function openWindow(win){
+    if (typeof win === "string") win = document.querySelector(win);
+    if (!win) return;
+    win.style.display = "block";
+    bringToFront(win);
+    createTaskButton(win);
+    setActiveTask(win, true);
+  }
+
+  function minimizeWindow(win){
+    if (typeof win === "string") win = document.querySelector(win);
+    if (!win) return;
+    win.style.display = "none";
+    setActiveTask(win, false);
+  }
+
+  function closeWindow(win){
+    if (typeof win === "string") win = document.querySelector(win);
+    if (!win) return;
+    const task = document.getElementById("task-"+win.id);
+    if (task) task.remove();
+    win.remove();
+  }
+
+  // expose
+  window.WM = { openWindow, minimizeWindow, closeWindow, makeDraggable, bringToFront, attachWindowControls };
 })();

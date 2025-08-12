@@ -57,3 +57,10 @@ body{
   display:block;
 }
 
+/* Make image icons fit the tile neatly */
+.tile-img{ max-width:100%; max-height:100%; image-rendering:pixelated; display:block; }
+
+/* Ensure titlebar controls are always clickable and visible */
+.window .titlebar{ position:relative; }
+.window .controls{ position:relative; z-index:2; }
+.window .controls .btn{ cursor:pointer; user-select:none; }

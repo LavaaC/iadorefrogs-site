@@ -1,4 +1,4 @@
-// Loader: sets wallpaper, builds icons from apps/, enforces tier access, opens windows on click
+// Loader: sets wallpaper, builds icons, enforces tier access, opens windows (GH Pages + Pi)
 (() => {
   const $ = (s, r=document) => r.querySelector(s);
   const tiers = ["guest","unverified","verified","closefriend","gf"];
@@ -7,7 +7,6 @@
   async function getJSON(url){ const r = await fetch(url, { cache: "no-cache" }); if(!r.ok) throw new Error(url+" "+r.status); return r.json(); }
   async function getText(url){ const r = await fetch(url, { cache: "no-cache" }); if(!r.ok) throw new Error(url+" "+r.status); return r.text(); }
 
-  // Build icon path: if icon looks like an image and isn't absolute, use <base>/<appId>/<icon>
   function resolveIcon(id, icon, title, base){
     const isImg = icon && /\.(png|jpe?g|gif|svg|webp)$/i.test(icon);
     if (!isImg) return { html: (icon || "🗂️") };
@@ -16,25 +15,24 @@
   }
 
   async function loadSite(){
-    // 1) Site config (relative paths so GH Pages works)
-    let site = { wallpaper: null, appsOrder: [], appsAssetsBase: "assets/apps" };
+    // Config (relative paths so GitHub Pages works)
+    let site = { wallpaper: null, appsOrder: [], appsAssetsBase: "assets/apps", devTier: null };
     try { site = Object.assign(site, await getJSON("config/site.json")); } catch(e){ /* defaults */ }
     if (site.wallpaper) document.body.style.backgroundImage = `url('${site.wallpaper}')`;
 
-    // 2) Icons grid
+    // Icons grid
     const icons = document.createElement("div");
     icons.id = "icons";
     $("#desktop").appendChild(icons);
 
-    // 3) App list
-    const list = await getJSON("apps/apps.json"); // e.g., ["info","map",...]
+    // App list
+    const list = await getJSON("apps/apps.json");
     const ordered = site.appsOrder?.length ? site.appsOrder.filter(x=>list.includes(x)) : list;
 
-    // 4) User tier from AUTH (auth.js will set __USER_TIER__; on GH Pages it'll stay "guest")
-    let userTier = window.__USER_TIER__ || "guest";
+    // Tier from AUTH (auth.js fires auth:me). On Pages, auth.js sets devTier as current tier.
+    let userTier = window.__USER_TIER__ || site.devTier || "guest";
     document.addEventListener("auth:me", (ev)=> { userTier = ev.detail?.tier || "guest"; });
 
-    // 5) Build desktop icons
     for (const id of ordered){
       const meta = await getJSON(`apps/${id}/app.json`);
       const access = meta.access || "guest";
@@ -53,7 +51,7 @@
       icons.appendChild(ic);
 
       ic.addEventListener("click", async ()=>{
-        const tierNow = window.__USER_TIER__ || "guest";
+        const tierNow = window.__USER_TIER__ || site.devTier || "guest";
         if (!canAccess(tierNow, access)) { alert(`Access denied. Requires: ${access}`); return; }
 
         let w = document.getElementById(`win-${id}`);
@@ -75,36 +73,10 @@
             <div class="content" id="content-${id}">Loading…</div>`;
           document.body.appendChild(w);
           WM.makeDraggable(w);
-          w.querySelector("[data-close]").onclick = ()=> WM.closeWindow(w);
-          w.querySelector("[data-min]").onclick   = ()=> WM.minimizeWindow(w);
+          WM.attachWindowControls(w);
 
-          try {
-            let html = "";
-            try {
-              html = await getText(`apps/${id}/layout.html`);
-            } catch (e1) {
-              try {
-                html = await getText(`apps/${id}/layout.htm`);
-              } catch (e2) {
-                html = `<div class="ph">
-                          <div><div class="ph-box"></div><div class="ph-cap">Missing layout.html/htm</div></div>
-                        </div>`;
-              }
-            }
-            document.getElementById(`content-${id}`).innerHTML = html;
-          } catch(e) {
-            document.getElementById(`content-${id}`).innerHTML =
-              `<div class="ph"><div><div class="ph-box"></div><div class="ph-cap">Missing layout.html</div></div></div>`;
-          }
-        }
-        WM.openWindow(w);
-      });
-    }
-
-    // 6) Clock
-    function tick(){ const d=new Date(); const hh=String(d.getHours()).padStart(2,"0"); const mm=String(d.getMinutes()).padStart(2,"0"); $("#clock").textContent = `${hh}:${mm}`; }
-    tick(); setInterval(tick, 10000);
-  }
-
-  loadSite().catch(err => console.error(err));
-})();
+          // layout.html, fallback to layout.htm
+          let html = "";
+          try { html = await getText(`apps/${id}/layout.html`); }
+          catch(e1){
+            try { html = await getText

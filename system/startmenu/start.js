@@ -1,9 +1,9 @@
-// Start menu: Create Account / Log in / Log out | builds small auth windows
+// Start menu at bottom-left: Create account / Log in / Log out + forms
 (() => {
   const $ = (s, r=document) => r.querySelector(s);
   const startBtn = $("#btn-start");
 
-  // Build menu
+  // Menu
   const menu = document.createElement("div");
   menu.id = "start-menu";
   menu.className = "hidden";
@@ -14,27 +14,29 @@
   `;
   document.body.appendChild(menu);
 
-  startBtn.addEventListener("click", ()=> menu.classList.toggle("hidden"));
-  document.addEventListener("click", (e)=>{
-    if (!menu.contains(e.target) && e.target !== startBtn) menu.classList.add("hidden");
-  });
+  // Toggle
+  startBtn.addEventListener("click", (e)=> { e.stopPropagation(); menu.classList.toggle("hidden"); });
+  document.addEventListener("click", (e)=> { if (!menu.contains(e.target) && e.target !== startBtn) menu.classList.add("hidden"); });
 
-  // Helper: small auth window template
+  // Small helper to build windows
   function makeAuthWindow(id, title, inner){
-    const w = document.createElement("div");
+    let w = document.getElementById(id);
+    if (w) return w;
+    w = document.createElement("div");
     w.className = "window"; w.id = id; w.dataset.title = title;
     w.style.cssText = "left:180px;top:100px;width:420px;display:none;";
     w.innerHTML = `
-      <div class="titlebar"><div class="title">${title}</div>
+      <div class="titlebar">
+        <div class="title">${title}</div>
         <div class="controls">
           <div class="btn" data-min>_</div>
           <div class="btn" data-close>×</div>
-        </div></div>
+        </div>
+      </div>
       <div class="content">${inner}</div>`;
     document.body.appendChild(w);
     WM.makeDraggable(w);
-    w.querySelector("[data-close]").onclick = ()=> WM.closeWindow(w);
-    w.querySelector("[data-min]").onclick   = ()=> WM.minimizeWindow(w);
+    WM.attachWindowControls(w);
     return w;
   }
 
@@ -67,15 +69,18 @@
       <div id="login-msg" style="margin-top:8px;color:#a00;"></div>
     </form>`);
 
-  $("#menu-signup").onclick = ()=> WM.openWindow(signupWin);
-  $("#menu-login").onclick  = ()=> WM.openWindow(loginWin);
+  // menu actions
+  $("#menu-signup").onclick = ()=> { WM.openWindow(signupWin); menu.classList.add("hidden"); };
+  $("#menu-login").onclick  = ()=> { WM.openWindow(loginWin);  menu.classList.add("hidden"); };
   $("#menu-logout").onclick = async ()=>{
     try { await AUTH.logout(); await AUTH.me(); } catch(e){ alert(e.message); }
+    menu.classList.add("hidden");
   };
-  document.getElementById("signup-cancel").onclick = ()=> WM.minimizeWindow(signupWin);
-  document.getElementById("login-cancel").onclick  = ()=> WM.minimizeWindow(loginWin);
 
-  // Form handlers
+  // form handlers
+  $("#signup-cancel").onclick = ()=> WM.minimizeWindow(signupWin);
+  $("#login-cancel").onclick  = ()=> WM.minimizeWindow(loginWin);
+
   $("#form-signup").addEventListener("submit", async (e)=>{
     e.preventDefault();
     const f = new FormData(e.target);
@@ -85,6 +90,7 @@
     try { await AUTH.signup(data); msg.style.color="#070"; msg.textContent="Account created!"; WM.minimizeWindow(signupWin); await AUTH.me(); }
     catch(err){ msg.style.color="#a00"; msg.textContent = err.message || "Error creating account"; }
   });
+
   $("#form-login").addEventListener("submit", async (e)=>{
     e.preventDefault();
     const f = new FormData(e.target);
