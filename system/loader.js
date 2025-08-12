@@ -2,10 +2,7 @@
 (() => {
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var tiers = ["guest","unverified","verified","closefriend","gf"];
-  function canAccess(userTier, appTier){
-    return tiers.indexOf(userTier) >= tiers.indexOf(appTier);
-  }
-  function val(v, d){ return (v === undefined || v === null) ? d : v; }
+  function canAccess(userTier, appTier){ return tiers.indexOf(userTier) >= tiers.indexOf(appTier); }
 
   function getJSON(url){
     return fetch(url, { cache: "no-cache" }).then(function(r){
@@ -28,22 +25,11 @@
     return { html: '<img src="'+path+'" alt="'+title+'" class="tile-img">', path: path };
   }
 
-  function attachControlsFallback(w){
-    var closeBtn = w.querySelector("[data-close]");
-    var minBtn   = w.querySelector("[data-min]");
-    if (closeBtn) closeBtn.onclick = function(e){ e.stopPropagation(); closeWindow(w); };
-    if (minBtn)   minBtn.onclick   = function(e){ e.stopPropagation(); minimizeWindow(w); };
-    w.addEventListener("mousedown", function(){ 
-      if (window.WM && WM.bringToFront) { WM.bringToFront(w); }
-      setActiveTask(w, true);
-    });
-  }
-
+  // minimal taskbar helpers (work even if WM.attachWindowControls is missing)
   function setActiveTask(win, on){
     var t = document.getElementById("task-"+win.id);
     if (t) t.classList.toggle("active", !!on);
   }
-
   function ensureTask(win){
     var id = "task-"+win.id;
     if (document.getElementById(id)) return;
@@ -57,7 +43,16 @@
     };
     $("#tasks").appendChild(b);
   }
-
+  function attachControlsFallback(w){
+    var closeBtn = w.querySelector("[data-close]");
+    var minBtn   = w.querySelector("[data-min]");
+    if (closeBtn) closeBtn.onclick = function(e){ e.stopPropagation(); closeWindow(w); };
+    if (minBtn)   minBtn.onclick   = function(e){ e.stopPropagation(); minimizeWindow(w); };
+    w.addEventListener("mousedown", function(){
+      if (window.WM && WM.bringToFront) { WM.bringToFront(w); }
+      setActiveTask(w, true);
+    });
+  }
   function openWindow(win){
     if (typeof win === "string") win = document.querySelector(win);
     if (!win) return;
@@ -85,8 +80,8 @@
 
     // 1) Config
     getJSON("config/site.json").then(function(cfg){
-      for (var k in cfg) site[k] = cfg[k];
-    }).catch(function(){ /* use defaults */ }).then(function(){
+      Object.keys(cfg || {}).forEach(function(k){ site[k] = cfg[k]; });
+    }).catch(function(){ /* keep defaults */ }).then(function(){
       if (site.wallpaper) document.body.style.backgroundImage = "url('"+site.wallpaper+"')";
 
       // 2) Icons grid
@@ -107,8 +102,8 @@
           userTier = t || "guest";
         });
 
-        // 5) Build icons
-        ordered.reduce(function(promise, id){
+        // 5) Build icons (sequential to keep logs tidy)
+        return ordered.reduce(function(promise, id){
           return promise.then(function(){
             return getJSON("apps/"+id+"/app.json").then(function(meta){
               var access = meta.access || "guest";
@@ -154,10 +149,9 @@
                     '<div class="content" id="content-'+id+'">Loading…</div>';
                   document.body.appendChild(w);
 
-                  // dragging
+                  // Dragging
                   if (window.WM && WM.makeDraggable) WM.makeDraggable(w);
-
-                  // attach controls (works even if WM.attachWindowControls is missing)
+                  // Controls (works even if WM.attachWindowControls is missing)
                   if (window.WM && typeof WM.attachWindowControls === "function") {
                     WM.attachWindowControls(w);
                   } else {
@@ -186,19 +180,17 @@
       });
     }).catch(function(e){
       console.error("loadSite error:", e);
-    }).finally(function(){
-      // 6) Clock
-      try {
-        function tick(){
-          var d = new Date();
-          var hh = String(d.getHours()).padStart(2, "0");
-          var mm = String(d.getMinutes()).padStart(2, "0");
-          var clk = document.getElementById("clock");
-          if (clk) clk.textContent = hh+":"+mm;
-        }
-        tick(); setInterval(tick, 10000);
-      } catch(e) {}
     });
+
+    // 6) Clock (always init)
+    function tick(){
+      var d = new Date();
+      var hh = String(d.getHours()).padStart(2, "0");
+      var mm = String(d.getMinutes()).padStart(2, "0");
+      var clk = document.getElementById("clock");
+      if (clk) clk.textContent = hh+":"+mm;
+    }
+    tick(); setInterval(tick, 10000);
   }
 
   // Run
