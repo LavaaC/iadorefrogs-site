@@ -1,4 +1,4 @@
-// Loader: wallpaper, desktop icons (image-only), tier access, open windows (GH Pages + Pi)
+// Loader: wallpaper, desktop icons (image-only), tier access, open windows (single-instance)
 (() => {
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var tiers = ["guest","unverified","verified","closefriend","gf"];
@@ -25,6 +25,9 @@
     return { html: '<img src="'+path+'" alt="'+title+'" class="desk-icon-img">', path: path };
   }
 
+  // Prevent double-create races
+  var openingApps = new Set();
+
   function loadSite(){
     var site = { wallpaper: null, appsOrder: [], appsAssetsBase: "assets/apps", devTier: null };
 
@@ -45,7 +48,7 @@
           ? site.appsOrder.filter(function(x){ return list.indexOf(x) !== -1; })
           : list.slice();
 
-        // 4) Tier (on Pages, auth.js sets devTier)
+        // 4) Tier (on Pages, auth.js may set devTier)
         var userTier = (window.__USER_TIER__ || site.devTier || "guest");
         document.addEventListener("auth:me", function(ev){
           var t = ev && ev.detail ? ev.detail.tier : null;
@@ -75,60 +78,75 @@
               icons.appendChild(ic);
 
               ic.addEventListener("click", function(){
+                // Re-check access at click time
                 var tierNow = (window.__USER_TIER__ || site.devTier || "guest");
                 if (!canAccess(tierNow, access)) { alert("Access denied. Requires: " + access); return; }
 
-                var w = document.getElementById("win-"+id);
-                if (!w) {
-                  w = document.createElement("div");
-                  w.className = "window";
-                  w.id = "win-"+id;
-                  w.dataset.title = title;
-                  if (iconRes.path) w.dataset.icon = iconRes.path;
+                var wid = "win-"+id;
+                var existing = document.getElementById(wid);
+                if (existing){
+                  // Already exists → just bring/open
+                  if (window.WM) WM.openWindow(existing);
+                  return;
+                }
+                if (openingApps.has(id)) {
+                  // Creation in progress, ignore extra clicks
+                  return;
+                }
+                openingApps.add(id);
 
-                  var px = meta.pos && typeof meta.pos.x !== "undefined" ? meta.pos.x : 180;
-                  var py = meta.pos && typeof meta.pos.y !== "undefined" ? meta.pos.y : 80;
-                  var ww = meta.size && typeof meta.size.w !== "undefined" ? meta.size.w : 560;
-                  w.style.left  = px + "px";
-                  w.style.top   = py + "px";
-                  w.style.width = ww + "px";
-                  w.innerHTML =
-                    '<div class="titlebar">' +
-                      '<div class="title">'+title+'</div>' +
-                      '<div class="controls">' +
-                        '<div class="btn" data-min>_</div>' +
-                        '<div class="btn" data-close>×</div>' +
-                      '</div>' +
+                // Create new window
+                var w = document.createElement("div");
+                w.className = "window";
+                w.id = wid;
+                w.dataset.title = title;
+                if (iconRes.path) w.dataset.icon = iconRes.path;
+
+                var px = meta.pos && typeof meta.pos.x !== "undefined" ? meta.pos.x : 180;
+                var py = meta.pos && typeof meta.pos.y !== "undefined" ? meta.pos.y : 80;
+                var ww = meta.size && typeof meta.size.w !== "undefined" ? meta.size.w : 560;
+                w.style.left  = px + "px";
+                w.style.top   = py + "px";
+                w.style.width = ww + "px";
+                w.innerHTML =
+                  '<div class="titlebar">' +
+                    '<div class="title">'+title+'</div>' +
+                    '<div class="controls">' +
+                      '<div class="btn" data-min>_</div>' +
+                      '<div class="btn" data-close>×</div>' +
                     '</div>' +
-                    (meta.toolbar ? ('<div class="toolbar">'+meta.toolbar+'</div>') : '') +
-                    '<div class="content" id="content-'+id+'">Loading…</div>';
-                  document.body.appendChild(w);
+                  '</div>' +
+                  (meta.toolbar ? ('<div class="toolbar">'+meta.toolbar+'</div>') : '') +
+                  '<div class="content" id="content-'+id+'">Loading…</div>';
+                document.body.appendChild(w);
 
-                  // Dragging + controls
-                  if (window.WM && WM.makeDraggable) WM.makeDraggable(w);
-                  if (window.WM && typeof WM.attachWindowControls === "function") {
-                    WM.attachWindowControls(w);
-                  } else {
-                    // Fallback control wiring
-                    const closeBtn = w.querySelector("[data-close]");
-                    const minBtn = w.querySelector("[data-min]");
-                    if (minBtn) minBtn.onclick = () => WM.minimizeWindow(w);
-                    if (closeBtn) closeBtn.onclick = () => WM.closeWindow(w);
-                  }
+                // Dragging + controls
+                if (window.WM && WM.makeDraggable) WM.makeDraggable(w);
+                if (window.WM && typeof WM.attachWindowControls === "function") {
+                  WM.attachWindowControls(w);
+                } else {
+                  const closeBtn = w.querySelector("[data-close]");
+                  const minBtn = w.querySelector("[data-min]");
+                  if (minBtn)  minBtn.onclick  = function(){ WM.minimizeWindow(w); };
+                  if (closeBtn) closeBtn.onclick = function(){ WM.closeWindow(w); };
+                }
 
-                  // Load layout.html (fallback to .htm)
-                  getText("apps/"+id+"/layout.html").then(function(html){
+                // Open immediately as active (lighter gray)
+                if (window.WM) WM.openWindow(w);
+
+                // Load layout.html (fallback to .htm) asynchronously
+                getText("apps/"+id+"/layout.html").then(function(html){
+                  $("#content-"+id).innerHTML = html;
+                }).catch(function(){
+                  return getText("apps/"+id+"/layout.htm").then(function(html){
                     $("#content-"+id).innerHTML = html;
                   }).catch(function(){
-                    return getText("apps/"+id+"/layout.htm").then(function(html){
-                      $("#content-"+id).innerHTML = html;
-                    }).catch(function(){
-                      $("#content-"+id).innerHTML =
-                        '<div class="ph"><div><div class="ph-box"></div><div class="ph-cap">Missing layout.html/htm</div></div></div>';
-                    });
+                    $("#content-"+id).innerHTML =
+                      '<div class="ph"><div><div class="ph-box"></div><div class="ph-cap">Missing layout.html/htm</div></div></div>';
                   });
-                }
-                WM.openWindow(w);
+                }).finally(function(){
+                  openingApps.delete(id);
+                });
               });
             }).catch(function(e){
               console.error("Failed to load app "+id+":", e.message);
