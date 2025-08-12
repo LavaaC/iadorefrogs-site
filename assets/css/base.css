@@ -11,11 +11,10 @@
   --title-text-inactive:#e6e6e6;
   --shadow: rgba(0,0,0,.25);
 
-  --taskbar-height: 40px;   /* a bit taller */
-  --taskbar-band:   10px;   /* deeper gray chunk */
+  /* Taskbar sizing & band */
+  --taskbar-height: 28px;   /* slightly taller than buttons */
+  --taskbar-band:   4px;    /* thin bottom band (~1/3 of 10px) */
   --taskbar-band-color: #6e6e6e;
-  --taskbar-band-top: #7d7d7d;
-  --taskbar-band-bottom: #4b4b4b;
 }
 
 html,body{height:100%}
@@ -34,7 +33,11 @@ body{
 }
 
 /* Icons grid */
-#icons{display:grid; grid-template-columns:repeat(auto-fill, minmax(92px,1fr)); gap:18px; padding:16px; max-width:860px; position:relative; z-index:1}
+#icons{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(92px,1fr));
+  gap:18px; padding:16px; max-width:860px;
+  position:relative; z-index:1
+}
 .icon{display:flex; flex-direction:column; align-items:center; gap:6px; color:#fff; cursor:default}
 
 /* Image-only desktop icons */
@@ -48,24 +51,30 @@ body{
   bottom: var(--taskbar-band);         /* leave room for the band */
   height: var(--taskbar-height);
   background: var(--win);
-  display:flex; align-items:flex-end;  /* buttons flush to bottom */
-  gap:6px; padding:4px 6px 6px;        /* extra bottom padding */
-  box-shadow: 0 -1px 0 var(--border-light) inset, 0 1px 0 var(--border-dark) inset;
+  display:flex; align-items:flex-end;  /* buttons sit low/flush */
+  gap:6px;
+  padding: 2px 6px 2px;                /* tighter, nearly flush */
+  /* remove bottom shadow to avoid a seam/white border */
+  box-shadow: 0 -1px 0 var(--border-light) inset; /* top highlight only */
 }
-.start{ display:flex; align-items:center; gap:6px; padding:3px 10px; background:var(--win); border:2px outset var(--border-light); cursor:pointer; font-weight:700 }
+.start{
+  display:flex; align-items:center; gap:6px;
+  padding:3px 10px; background:var(--win);
+  border:2px outset var(--border-light);
+  cursor:pointer; font-weight:700
+}
 .start:active{ border:2px inset var(--border-light) }
 .tasks{ flex:1; display:flex; gap:6px; overflow:auto }
 
-/* Darker band below the taskbar */
+/* Thin darker band below the taskbar */
 .taskbar::after{
   content:"";
-  position: fixed;  /* fixed to viewport bottom for a solid 'chunk' */
+  position: fixed;  /* fixed to viewport bottom for a solid band */
   left:0; right:0; bottom:0;
   height: var(--taskbar-band);
   background: var(--taskbar-band-color);
-  box-shadow:
-    inset 0 1px 0 var(--taskbar-band-top),
-    inset 0 -1px 0 var(--taskbar-band-bottom);
+  /* no extra lines -> no seam */
+  box-shadow: none;
   pointer-events:none;
 }
 
@@ -89,7 +98,7 @@ body{
   right: 10px;
   bottom: calc(var(--taskbar-height) + var(--taskbar-band) + 6px);
   color: #fff;
-  font-size: 12px;              /* smaller text */
+  font-size: 12px;
   text-shadow: 1px 1px 0 #000;
   background: rgba(0,0,0,0.15);
   padding: 2px 6px;
@@ -145,29 +154,3 @@ body{
 .ph{display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:12px}
 .ph-box{height:100px; background:#e8e8e8; border:2px inset var(--border-mid)}
 .ph-cap{font-size:12px; color:#222}
-
-
-/* App icon images inside tiles */
-.tile-img{
-  max-width: 100%;
-  max-height: 100%;
-  image-rendering: pixelated;
-  display: block;
-}
-
-.window { position: absolute; z-index: 100; }
-.window .titlebar { position: relative; user-select: none; }
-.window .controls {
-  position: absolute; right: 6px; top: 4px;
-  display: flex; gap: 6px;
-  z-index: 9999;           /* keep on top inside window */
-  pointer-events: auto;
-}
-.window .controls .btn {
-  display: inline-grid; place-items: center;
-  width: 22px; height: 18px; line-height: 16px;
-  border: 1px solid #000; background: #c0c0c0;
-  cursor: pointer; user-select: none; pointer-events: auto;
-}
-.window .controls .btn:active { filter: brightness(0.95); }
-#icons { position: relative; z-index: 1; } /* icons behind windows */
