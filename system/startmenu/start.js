@@ -1,102 +1,208 @@
-// Start menu at bottom-left: Create account / Log in / Log out + forms
+// Start menu: reliable toggle, conditional auth items, Customize & Bug report
 (() => {
   const $ = (s, r=document) => r.querySelector(s);
-  const startBtn = $("#btn-start");
 
-  // Menu
-  const menu = document.createElement("div");
-  menu.id = "start-menu";
-  menu.className = "hidden";
-  menu.innerHTML = `
-    <button id="menu-signup">Create account</button>
-    <button id="menu-login">Log in</button>
-    <button id="menu-logout">Log out</button>
-  `;
-  document.body.appendChild(menu);
-
-  // Toggle
-  startBtn.addEventListener("click", (e)=> { e.stopPropagation(); menu.classList.toggle("hidden"); });
-  document.addEventListener("click", (e)=> { if (!menu.contains(e.target) && e.target !== startBtn) menu.classList.add("hidden"); });
-
-  // Small helper to build windows
-  function makeAuthWindow(id, title, inner){
-    let w = document.getElementById(id);
-    if (w) return w;
-    w = document.createElement("div");
-    w.className = "window"; w.id = id; w.dataset.title = title;
-    w.style.cssText = "left:180px;top:100px;width:420px;display:none;";
-    w.innerHTML = `
-      <div class="titlebar">
-        <div class="title">${title}</div>
-        <div class="controls">
-          <div class="btn" data-min>_</div>
-          <div class="btn" data-close>×</div>
-        </div>
-      </div>
-      <div class="content">${inner}</div>`;
-    document.body.appendChild(w);
-    WM.makeDraggable(w);
-    WM.attachWindowControls(w);
-    return w;
+  // Create menu element once
+  let menu = document.getElementById("start-menu");
+  if (!menu) {
+    menu = document.createElement("div");
+    menu.id = "start-menu";
+    menu.className = "hidden";
+    document.body.appendChild(menu);
   }
 
-  const signupWin = makeAuthWindow("win-signup","Create account",`
-    <form id="form-signup" class="form">
-      <label>Username<br><input name="username" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_.-]+"></label><br>
-      <label>Password<br><input name="password" type="password" required minlength="8"></label><br>
-      <label>Confirm Password<br><input name="confirmPassword" type="password" required minlength="8"></label><br>
-      <label>Name I know you as<br><input name="knowAs" required maxlength="40"></label><br>
-      <label>Date we met (mm/dd/yy)<br><input name="metDate" required pattern="(0[1-9]|1[0-2])\\/([0-2][0-9]|3[01])\\/\\d{2}"></label><br>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-        <input type="checkbox" name="confirmNotReuse" required>
-        <span>This is not my password for everything else because giving me that would be really dumb</span>
-      </label>
-      <div style="margin-top:10px;display:flex;gap:8px;">
-        <button type="submit">Create account</button>
-        <button type="button" id="signup-cancel">Cancel</button>
-      </div>
-      <div id="signup-msg" style="margin-top:8px;color:#a00;"></div>
-    </form>`);
+  let open = false;
+  const btn = $("#btn-start");
+  const state = { loggedIn: false, me: null };
 
-  const loginWin = makeAuthWindow("win-login","Log in",`
-    <form id="form-login" class="form">
-      <label>Username<br><input name="username" required></label><br>
-      <label>Password<br><input name="password" type="password" required></label><br>
-      <div style="margin-top:10px;display:flex;gap:8px;">
-        <button type="submit">Log in</button>
-        <button type="button" id="login-cancel">Cancel</button>
-      </div>
-      <div id="login-msg" style="margin-top:8px;color:#a00;"></div>
-    </form>`);
+  // Listen for auth state (auth.js should dispatch auth:me)
+  document.addEventListener("auth:me", ev => {
+    state.me = ev.detail || null;
+    state.loggedIn = !!state.me?.username;
+    render();
+  });
 
-  // menu actions
-  $("#menu-signup").onclick = ()=> { WM.openWindow(signupWin); menu.classList.add("hidden"); };
-  $("#menu-login").onclick  = ()=> { WM.openWindow(loginWin);  menu.classList.add("hidden"); };
-  $("#menu-logout").onclick = async ()=>{
-    try { await AUTH.logout(); await AUTH.me(); } catch(e){ alert(e.message); }
+  // Utility: build one menu button
+  function item(id, label){
+    return `<button data-id="${id}" class="start-item">${label}</button>`;
+  }
+
+  function render(){
+    const items = [];
+    items.push(item("create", "Create account"));
+    if (state.loggedIn) items.push(item("logout", "Log out"));
+    else items.push(item("login", "Log in"));
+    items.push("<hr>");
+    items.push(item("customize", "Customize…"));
+    items.push(item("bug", "Bug report…"));
+    menu.innerHTML = `<div class="start-wrap">${items.join("")}</div>`;
+    wire();
+  }
+
+  function wire(){
+    menu.querySelectorAll(".start-item").forEach(b=>{
+      b.addEventListener("click", e=>{
+        const id = b.dataset.id;
+        closeMenu();
+        if (id === "create") {
+          document.dispatchEvent(new CustomEvent("auth:openCreate"));
+        } else if (id === "login") {
+          document.dispatchEvent(new CustomEvent("auth:openLogin"));
+        } else if (id === "logout") {
+          document.dispatchEvent(new CustomEvent("auth:logout"));
+        } else if (id === "customize") {
+          openCustomize();
+        } else if (id === "bug") {
+          openBugReport();
+        }
+      });
+    });
+  }
+
+  function openMenu(){
+    const r = btn.getBoundingClientRect();
+    menu.style.left = (r.left) + "px";
+    menu.style.bottom = (window.innerHeight - r.top + 6) + "px";
+    menu.classList.remove("hidden");
+    open = true;
+  }
+  function closeMenu(){
     menu.classList.add("hidden");
-  };
+    open = false;
+  }
+  function toggleMenu(){
+    if (open) closeMenu(); else openMenu();
+  }
 
-  // form handlers
-  $("#signup-cancel").onclick = ()=> WM.minimizeWindow(signupWin);
-  $("#login-cancel").onclick  = ()=> WM.minimizeWindow(loginWin);
-
-  $("#form-signup").addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    const f = new FormData(e.target);
-    const data = Object.fromEntries(f.entries());
-    data.confirmNotReuse = !!f.get("confirmNotReuse");
-    const msg = $("#signup-msg"); msg.textContent = "";
-    try { await AUTH.signup(data); msg.style.color="#070"; msg.textContent="Account created!"; WM.minimizeWindow(signupWin); await AUTH.me(); }
-    catch(err){ msg.style.color="#a00"; msg.textContent = err.message || "Error creating account"; }
+  // Close on outside click & Esc
+  document.addEventListener("click", (e)=>{
+    if (!open) return;
+    if (e.target.closest("#start-menu") || e.target.closest("#btn-start")) return;
+    closeMenu();
   });
+  document.addEventListener("keydown", (e)=>{ if (e.key === "Escape") closeMenu(); });
+  btn.addEventListener("click", (e)=>{ e.preventDefault(); toggleMenu(); });
 
-  $("#form-login").addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    const f = new FormData(e.target);
-    const data = Object.fromEntries(f.entries());
-    const msg = $("#login-msg"); msg.textContent = "";
-    try { await AUTH.login(data); msg.style.color="#070"; msg.textContent="Logged in!"; WM.minimizeWindow(loginWin); await AUTH.me(); }
-    catch(err){ msg.style.color="#a00"; msg.textContent = err.message || "Login failed"; }
-  });
+  // ----- Customize window -----
+  async function openCustomize(){
+    // Build or reuse window
+    let w = document.getElementById("win-customize");
+    if (!w) {
+      w = document.createElement("div");
+      w.className = "window";
+      w.id = "win-customize";
+      w.dataset.title = "Customize";
+      w.style.left = "120px"; w.style.top = "80px"; w.style.width = "520px";
+      w.innerHTML = `
+        <div class="titlebar">
+          <div class="title">Customize</div>
+          <div class="controls"><div class="btn" data-min>_</div><div class="btn" data-close>×</div></div>
+        </div>
+        <div class="content" id="content-customize">
+          <p>Change app order, hide/show on desktop, and pin to Quick Launch (left of tabs).</p>
+          <div id="customize-list" class="cz-list"></div>
+          <div class="cz-actions">
+            <button id="cz-save">Save</button>
+            <button id="cz-reset">Reset to Default</button>
+          </div>
+        </div>`;
+      document.body.appendChild(w);
+      if (window.WM){ WM.makeDraggable(w); WM.attachWindowControls(w); }
+    }
+
+    // Load app list + per-user prefs
+    const list = await fetch("apps/apps.json",{cache:"no-cache"}).then(r=>r.json());
+    const metas = await Promise.all(list.map(id=>fetch(`apps/${id}/app.json`,{cache:"no-cache"}).then(r=>r.json()).then(m=>({id,meta:m})).catch(()=>({id,meta:{title:id}}))));
+    const siteCfg = await fetch("config/site.json",{cache:"no-cache"}).then(r=>r.json()).catch(()=>({}));
+    const defOrder = Array.from(new Set(siteCfg.defaultOrder && siteCfg.defaultOrder.length ? siteCfg.defaultOrder : list));
+    const meName = state.me?.username || "guest";
+    const key = `frogs_prefs_${meName}`;
+    const prefs = JSON.parse(localStorage.getItem(key) || "{}");
+    const order = (prefs.order && prefs.order.length) ? prefs.order.filter(x=>list.includes(x)) : defOrder.slice();
+    const hidden = new Set(prefs.hidden || []);
+    const pinned = new Set(prefs.pinned || []);
+
+    // Render simple list with Up/Down + show + pin
+    const host = document.getElementById("customize-list");
+    host.innerHTML = order.map(id=>{
+      const m = metas.find(x=>x.id===id)?.meta || {title:id};
+      return `
+        <div class="cz-row" data-id="${id}">
+          <button class="cz-up">▲</button>
+          <button class="cz-down">▼</button>
+          <label><input type="checkbox" class="cz-show" ${hidden.has(id)? "":"checked"}> Show</label>
+          <label><input type="checkbox" class="cz-pin" ${pinned.has(id)? "checked":""}> Pin</label>
+          <span class="cz-title">${m.title || id}</span>
+        </div>`;
+    }).join("");
+
+    // Wire up/down
+    host.addEventListener("click",(e)=>{
+      const row = e.target.closest(".cz-row"); if (!row) return;
+      if (e.target.classList.contains("cz-up")) {
+        const prev = row.previousElementSibling; if (prev) host.insertBefore(row, prev);
+      } else if (e.target.classList.contains("cz-down")) {
+        const next = row.nextElementSibling; if (next) host.insertBefore(next, row);
+      }
+    });
+
+    // Save/Reset
+    $("#cz-save").onclick = ()=>{
+      const rows = Array.from(host.querySelectorAll(".cz-row"));
+      const newOrder = rows.map(r=>r.dataset.id);
+      const newHidden = rows.filter(r=>!r.querySelector(".cz-show").checked).map(r=>r.dataset.id);
+      const newPinned = rows.filter(r=> r.querySelector(".cz-pin").checked).map(r=>r.dataset.id);
+      const data = { order: newOrder, hidden: newHidden, pinned: newPinned };
+      localStorage.setItem(key, JSON.stringify(data));
+      alert("Saved. Reloading to apply.");
+      location.reload();
+    };
+    $("#cz-reset").onclick = ()=>{
+      localStorage.removeItem(key);
+      alert("Reset. Reloading to apply.");
+      location.reload();
+    };
+
+    WM.openWindow(w);
+  }
+
+  // ----- Bug report window -----
+  function openBugReport(){
+    let w = document.getElementById("win-bug");
+    if (!w) {
+      w = document.createElement("div");
+      w.className = "window";
+      w.id = "win-bug";
+      w.dataset.title = "Bug report";
+      w.style.left = "160px"; w.style.top = "120px"; w.style.width = "520px";
+      w.innerHTML = `
+        <div class="titlebar">
+          <div class="title">Bug report</div>
+          <div class="controls"><div class="btn" data-min>_</div><div class="btn" data-close>×</div></div>
+        </div>
+        <div class="content">
+          <p>Describe the issue:</p>
+          <textarea id="bug-text" style="width:100%;height:160px"></textarea>
+          <div style="margin-top:8px;display:flex;gap:8px">
+            <button id="bug-copy">Copy</button>
+            <a id="bug-mail" class="taskbtn" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">Open email</a>
+          </div>
+        </div>`;
+      document.body.appendChild(w);
+      if (window.WM){ WM.makeDraggable(w); WM.attachWindowControls(w); }
+      w.querySelector("#bug-copy").onclick = ()=>{
+        const t = w.querySelector("#bug-text").value;
+        navigator.clipboard?.writeText(t);
+        alert("Copied.");
+      };
+      w.querySelector("#bug-text").addEventListener("input", e=>{
+        const msg = encodeURIComponent(e.target.value || "");
+        w.querySelector("#bug-mail").href = `mailto:me@example.com?subject=Bug%20report&body=${msg}`;
+      });
+    }
+    WM.openWindow(w);
+  }
+
+  // initial draw
+  render();
 })();

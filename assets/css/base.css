@@ -126,6 +126,22 @@ body{
   margin-left:auto;
 }
 
+/* Quick Launch strip (left of tabs) */
+.quick{
+  display:flex; align-items:center; gap:4px;
+  padding:0 6px; margin:0 6px 0 6px;
+}
+.quick .ql{
+  display:inline-grid; place-items:center;
+  width:24px; height:24px;
+  border:2px outset var(--border-light);
+  background:var(--win);
+  cursor:pointer;
+}
+.quick .ql:active{ border:2px inset var(--border-light); }
+.quick .ql-img{ width:16px; height:16px; image-rendering:pixelated; }
+
+
 /* Windows */
 .window{
   position:absolute;
