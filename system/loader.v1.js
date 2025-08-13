@@ -26,16 +26,25 @@
     if(!document.getElementById('start-button')){
       const b=document.createElement('button');b.id='start-button';b.className='start-button';b.textContent='Start';taskbar.appendChild(b);
     }
+    if(!document.querySelector('.spacer')){ const sp=document.createElement('div'); sp.className='spacer'; taskbar.appendChild(sp); }
+    if(!document.querySelector('.clock')){ const c=document.createElement('div'); c.className='clock'; taskbar.appendChild(c); }
     ensure('start-menu','start-menu hidden');
     ensure('windows','windows-layer');
     return {desktop,taskbar};
+  }
+
+  // --- Simple clock ---
+  function startClock(){
+    const c=document.querySelector('.clock'); if(!c) return;
+    function tick(){ const d=new Date(); c.textContent=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+    tick(); clearInterval(startClock._t); startClock._t=setInterval(tick, 1000);
   }
 
   // --- Windows (fallback if WM missing) ---
   async function openAppWindow(app){
     const url=`/apps/${app.id}/layout.html`;
     if(window.WM?.open) return window.WM.open({id:app.id,title:app.title||app.id,icon:app.icon,url});
-    const win=document.createElement('div');Object.assign(win.style,{position:'absolute',left:(app.x||60)+'px',top:(app.y||60)+'px',width:(app.w||520)+'px',height:(app.h||380)+'px',background:'#1f1f1f',color:'#fff',border:'1px solid #444',boxShadow:'0 4px 16px rgba(0,0,0,.5)',zIndex:1000});
+    const win=document.createElement('div');Object.assign(win.style,{position:'absolute',left:(app.x||60)+'px',top:(app.y||60)+'px',width:(app.w||560)+'px',height:(app.h||400)+'px',background:'#1f1f1f',color:'#fff',border:'1px solid #444',boxShadow:'0 4px 16px rgba(0,0,0,.5)',zIndex:1000});
     const bar=document.createElement('div');bar.textContent=app.title||app.id;Object.assign(bar.style,{background:'#2b2b2b',padding:'6px 8px',cursor:'move',userSelect:'none'});
     const x=document.createElement('button');x.textContent='✕';Object.assign(x.style,{float:'right',background:'transparent',color:'#fff',border:'none',cursor:'pointer'});x.onclick=()=>win.remove();
     bar.appendChild(x);
@@ -91,6 +100,7 @@
     if(me.tier==='devmode'){ getJSON(`${API}/admin/settings`).then(s=>window.siteAdmin=s).catch(()=>{}); }
 
     await buildDesktop(desktop, me);
+    startClock();
 
     try{ window.dispatchEvent(new CustomEvent('auth:me',{detail:me})); }catch{}
   }
