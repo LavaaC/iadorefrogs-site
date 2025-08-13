@@ -1,10 +1,9 @@
-sudo tee /var/www/html/system/loader.js >/dev/null <<'EOF'
 // system/loader.js
 (function () {
-  // ---- GLOBAL HELPERS (for admin.js/chat.js/etc.) ----
+  // ---- GLOBAL HELPERS (used by admin.js/chat.js/etc.) ----
   async function _fetchJSON(url, opts = {}) {
     const r = await fetch(url, { credentials: 'include', cache: 'no-store', ...opts });
-    if (!r.ok) throw new Error(`${r.status}`);
+    if (!r.ok) throw new Error(String(r.status));
     return r.json();
   }
   async function _sendJSON(url, method, data) {
@@ -12,12 +11,11 @@ sudo tee /var/www/html/system/loader.js >/dev/null <<'EOF'
       method,
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: data != null ? JSON.stringify(data) : undefined,
+      body: data != null ? JSON.stringify(data) : undefined
     });
-    if (!r.ok) throw new Error(`${r.status}`);
+    if (!r.ok) throw new Error(String(r.status));
     return r.json();
   }
-  // expose globally so other scripts can use them
   window.getJSON = (url, opts) => _fetchJSON(url, opts);
   window.postJSON = (url, data) => _sendJSON(url, 'POST', data);
   window.putJSON  = (url, data) => _sendJSON(url, 'PUT',  data);
@@ -36,7 +34,7 @@ sudo tee /var/www/html/system/loader.js >/dev/null <<'EOF'
     }
 
     const API = site.apiBase || '/api';
-    window.API = API;            // for legacy code
+    window.API = API;            // legacy alias
     window.API_BASE = API;       // extra alias some code may use
     window.siteConfig = site;
 
@@ -45,7 +43,7 @@ sudo tee /var/www/html/system/loader.js >/dev/null <<'EOF'
     try { me = await getJSON(`${API}/me`); } catch (e) { console.warn('/api/me failed', e); }
     window.currentUser = me;
 
-    // 3) Admin settings only for devs (never block boot)
+    // 3) Admin settings only for devs (non-blocking)
     let admin = null;
     if (me.tier === 'devmode') {
       try { admin = await getJSON(`${API}/admin/settings`); }
@@ -53,25 +51,23 @@ sudo tee /var/www/html/system/loader.js >/dev/null <<'EOF'
     }
     window.siteAdmin = admin;
 
-    // 4) Apply wallpaper (no-crash)
+    // 4) Wallpaper
     try {
       const wp = site.wallpaper || '/assets/wallpapers/frogs.jpg';
       Object.assign(document.body.style, {
         backgroundImage: `url('${wp}')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
+        backgroundRepeat: 'no-repeat'
       });
     } catch (e) { console.warn('wallpaper failed', e); }
 
-    // 5) Notify the rest of the UI
-    try {
-      window.dispatchEvent(new CustomEvent('auth:me', { detail: me }));
-    } catch (e) { console.warn('auth:me dispatch failed', e); }
+    // 5) Notify UI
+    try { window.dispatchEvent(new CustomEvent('auth:me', { detail: me })); }
+    catch (e) { console.warn('auth:me dispatch failed', e); }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     loadSite().catch(err => console.error('loadSite fatal', err));
   });
 })();
-EOF
