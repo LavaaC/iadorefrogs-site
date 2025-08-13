@@ -1,8 +1,7 @@
 {
   "apiBase": "/api",
   "devMode": false,
-  "appsAssetsBase": "assets/apps",
-  "defaultOrder": ["info","chat","tierlist","paint"],
-  "wallpaper": "assets/wallpapers/frogs.jpg"
+  "appsAssetsBase": "/assets/apps",
+  "defaultOrder": [],
+  "wallpaper": "/assets/wallpapers/default.jpg"
 }
-

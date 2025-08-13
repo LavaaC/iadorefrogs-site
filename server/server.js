@@ -1,194 +1,178 @@
+// server/server.js
 const express = require('express');
 const session = require('express-session');
-const fs = require('fs');
-const fsp = require('fs').promises;
+const fs = require('fs/promises');
+const fssync = require('fs');
 const path = require('path');
-const bcrypt = require('bcryptjs');
-// const cors = require('cors'); // same-origin via nginx proxy; not needed by default
 
-const app = express();
-app.set('trust proxy', 1);
-app.use(express.json({ limit: '1mb' }));
-// If you test cross-origin, you can enable carefully:
-// app.use(cors({ origin: 'https://iadorefrogs.com', credentials: true }));
-
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'CHANGE_ME',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { sameSite: 'lax', secure: false, httpOnly: true }
-}));
-
-// ----- Paths on the Pi -----
 const SITE_ROOT = process.env.SITE_ROOT || '/var/www/html';
-const DATA_DIR  = path.join(SITE_ROOT, 'system', 'data');
-const CHAT_DIR  = path.join(SITE_ROOT, 'system', 'chat', 'rooms');
+const PORT = Number(process.env.PORT || 3000);
+const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret';
+const NODE_ENV = process.env.NODE_ENV || 'production';
+const COOKIE_SECURE = (process.env.SESSION_SECURE || 'true').toLowerCase() !== 'false'; // default secure cookies
+
+const DATA_DIR = path.join(SITE_ROOT, 'system', 'data');
+const CHAT_DIR = path.join(SITE_ROOT, 'system', 'chat', 'rooms');
 const USERS_JSON = path.join(DATA_DIR, 'users.json');
 const ADMIN_JSON = path.join(DATA_DIR, 'admin.json');
 
-const TIERS = ['guest','unverified','verified','closefriend','devmode'];
-const idx = t => TIERS.indexOf(t || 'guest');
-const canAccess = (userTier, reqTier) => idx(userTier) >= idx(reqTier || 'guest');
+const app = express();
+app.set('trust proxy', 1);
+app.use(express.json());
+app.use(session({
+  name: 'frogs.sid',
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, sameSite: 'lax', secure: COOKIE_SECURE }
+}));
 
-async function ensurePaths() {
-  await fsp.mkdir(DATA_DIR, { recursive: true });
-  await fsp.mkdir(CHAT_DIR, { recursive: true });
-  try { await fsp.access(USERS_JSON); } catch { await fsp.writeFile(USERS_JSON, '[]'); }
-  try { await fsp.access(ADMIN_JSON); } catch { await fsp.writeFile(ADMIN_JSON, JSON.stringify({order:[],hidden:[],pinned:[],perApp:{}}, null, 2)); }
-}
-
-function safeReadJSON(file, fallback) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
+// ---------- utils ----------
+const ensureDir = async (p) => { if (!fssync.existsSync(p)) await fs.mkdir(p, { recursive: true }); };
+const readJson = async (p, fallback) => {
+  try { return JSON.parse(await fs.readFile(p, 'utf8') || ''); }
   catch { return fallback; }
-}
+};
+const writeJson = async (p, obj) => {
+  await ensureDir(path.dirname(p));
+  const tmp = p + '.tmp';
+  await fs.writeFile(tmp, JSON.stringify(obj, null, 2));
+  await fs.rename(tmp, p);
+};
+const sanitizeRoom = (name) => (name || '').toString().toLowerCase().replace(/[^a-z0-9-_]/g, '').slice(0, 64) || 'public';
+const isDev = (req) => req.session?.user?.tier === 'devmode';
+const isLogged = (req) => !!req.session?.user;
 
-async function writeJSON(file, data) {
-  await fsp.writeFile(file, JSON.stringify(data, null, 2));
-}
+// ---------- bootstrap minimal storage ----------
+(async () => {
+  await ensureDir(DATA_DIR);
+  await ensureDir(CHAT_DIR);
+  if (!fssync.existsSync(USERS_JSON)) {
+    await writeJson(USERS_JSON, [
+      { username: 'Agu', password: 'CHANGE_ME', name: 'Agu', tier: 'devmode' }
+    ]);
+  }
+  if (!fssync.existsSync(ADMIN_JSON)) {
+    await writeJson(ADMIN_JSON, { order: [], hidden: [], pinned: [], perApp: {} });
+  }
+  if (!fssync.existsSync(path.join(CHAT_DIR, 'public.txt'))) {
+    await writeJson(path.join(CHAT_DIR, 'public.txt'), []);
+  }
+})().catch(console.error);
 
-function sanitizeRoom(s) {
-  return (s||'').toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40) || 'public';
-}
+// ---------- health/debug ----------
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/whereami', (_req, res) => {
+  res.json({ siteRoot: SITE_ROOT, nodeEnv: NODE_ENV, port: PORT, dataDir: DATA_DIR, chatDir: CHAT_DIR });
+});
 
-function redactedUsersForList(users) {
-  return users.map(u => ({ username: u.username, name: u.name || '', tier: u.tier || 'unverified' }));
-}
-function findUser(users, username) {
-  const u = (username||'').toLowerCase();
-  return users.find(x => (x.username||'').toLowerCase() === u);
-}
-async function checkPassword(user, plain) {
-  if (!user) return false;
-  if (user.passwordHash) return await bcrypt.compare(plain, user.passwordHash);
-  return (user.password || '') === (plain || '');
-}
+// ---------- auth ----------
+let bcrypt = null;
+try { bcrypt = require('bcryptjs'); } catch { /* optional */ }
 
-app.get('/api/health', (req,res)=> res.json({ ok:true }));
-
-app.post('/api/login', async (req,res)=>{
-  await ensurePaths();
+app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
-  const users = safeReadJSON(USERS_JSON, []);
-  const user = findUser(users, username);
-  if (!user || !(await checkPassword(user, password))) return res.status(401).json({ error:'Invalid credentials' });
-  req.session.user = { username: user.username, name: user.name || '', tier: user.tier || 'unverified' };
-  res.json({ ok:true, me: req.session.user });
+  if (!username || !password) return res.status(400).json({ error: 'missing-credentials' });
+  const users = await readJson(USERS_JSON, []);
+  const u = users.find(x => x.username === username);
+  if (!u) return res.status(401).json({ error: 'invalid-credentials' });
+
+  if (u.passwordHash && bcrypt) {
+    const ok = await bcrypt.compare(password, u.passwordHash);
+    if (!ok) return res.status(401).json({ error: 'invalid-credentials' });
+  } else if (u.password) {
+    if (password !== u.password) return res.status(401).json({ error: 'invalid-credentials' });
+  } else {
+    return res.status(500).json({ error: 'no-password-on-record' });
+  }
+
+  req.session.user = { username: u.username, name: u.name || u.username, tier: u.tier || 'guest' };
+  res.json(req.session.user);
 });
 
-app.post('/api/logout', (req,res)=>{
-  req.session.destroy(()=> res.json({ ok:true }));
+app.post('/api/logout', (req, res) => {
+  req.session.destroy(() => res.json({ ok: true }));
 });
 
-app.get('/api/me', (req,res)=>{
-  const me = req.session.user || { username:'', name:'', tier:'guest' };
-  res.json({ me });
+app.get('/api/me', (req, res) => {
+  if (!req.session.user) return res.json({ username: null, name: 'Guest', tier: 'guest' });
+  res.json(req.session.user);
 });
 
-function requireDevmode(req,res,next){
-  const u = req.session.user;
-  if (!u || u.tier !== 'devmode') return res.status(403).json({ error:'forbidden' });
-  next();
-}
-
-app.get('/api/admin/settings', requireDevmode, async (req,res)=>{
-  await ensurePaths();
-  const data = safeReadJSON(ADMIN_JSON, { order:[], hidden:[], pinned:[], perApp:{} });
-  res.json(data);
-});
-app.put('/api/admin/settings', requireDevmode, async (req,res)=>{
-  await ensurePaths();
-  const p = req.body || {};
-  const clean = {
-    order: Array.isArray(p.order) ? p.order : [],
-    hidden: Array.isArray(p.hidden) ? p.hidden : [],
-    pinned: Array.isArray(p.pinned) ? p.pinned : [],
-    perApp: typeof p.perApp === 'object' && p.perApp ? p.perApp : {}
-  };
-  await writeJSON(ADMIN_JSON, clean);
-  res.json({ ok:true });
+// ---------- admin: settings ----------
+app.get('/api/admin/settings', async (req, res) => {
+  if (!isDev(req)) return res.status(403).json({ error: 'forbidden' });
+  const s = await readJson(ADMIN_JSON, { order: [], hidden: [], pinned: [], perApp: {} });
+  res.json(s);
 });
 
-app.get('/api/admin/users', requireDevmode, async (req,res)=>{
-  await ensurePaths();
-  const users = safeReadJSON(USERS_JSON, []);
-  res.json(redactedUsersForList(users));
-});
-app.put('/api/admin/users', requireDevmode, async (req,res)=>{
-  await ensurePaths();
-  const { updates } = req.body || {};
-  if (!Array.isArray(updates)) return res.status(400).json({ error:'bad updates' });
-  const users = safeReadJSON(USERS_JSON, []);
-  updates.forEach(up=>{
-    const u = findUser(users, up.username);
-    if (u && TIERS.includes(up.tier)) u.tier = up.tier;
-  });
-  await writeJSON(USERS_JSON, users);
-  res.json({ ok:true });
+app.put('/api/admin/settings', async (req, res) => {
+  if (!isDev(req)) return res.status(403).json({ error: 'forbidden' });
+  const next = req.body && typeof req.body === 'object' ? req.body : {};
+  await writeJson(ADMIN_JSON, next);
+  res.json({ ok: true });
 });
 
-// optional signup (okay for testing; consider disabling later)
-app.post('/api/signup', async (req,res)=>{
-  await ensurePaths();
-  const { username, password, name, metDate, ack } = req.body || {};
-  if (!username || !password || ack !== true) return res.status(400).json({ error:'missing fields' });
-  const users = safeReadJSON(USERS_JSON, []);
-  if (findUser(users, username)) return res.status(409).json({ error:'exists' });
-  users.push({ username, password, name: name||'', metDate: metDate||'', tier:'unverified' });
-  await writeJSON(USERS_JSON, users);
-  res.json({ ok:true });
+// ---------- admin: users (view/update tiers) ----------
+app.get('/api/admin/users', async (req, res) => {
+  if (!isDev(req)) return res.status(403).json({ error: 'forbidden' });
+  const users = await readJson(USERS_JSON, []);
+  res.json(users.map(({ username, name, tier }) => ({ username, name, tier })));
 });
 
-// chat helpers
-function requiredChatTier(){
-  const admin = safeReadJSON(ADMIN_JSON, { perApp:{} });
-  return admin?.perApp?.chat?.access || 'verified';
-}
-async function loadRoom(room){
-  const file = path.join(CHAT_DIR, `${room}.txt`);
-  try { return JSON.parse(await fsp.readFile(file, 'utf8') || '[]'); }
-  catch { return []; }
-}
-async function saveRoom(room, arr){
-  const file = path.join(CHAT_DIR, `${room}.txt`);
-  await fsp.writeFile(file, JSON.stringify(arr, null, 2));
-}
+app.put('/api/admin/users', async (req, res) => {
+  if (!isDev(req)) return res.status(403).json({ error: 'forbidden' });
+  const body = req.body || {};
+  let updates = [];
+  if (Array.isArray(body.users)) updates = body.users;
+  else if (body.username && body.tier) updates = [body];
+  else return res.status(400).json({ error: 'bad-payload' });
 
-app.get('/api/chat/rooms', async (req,res)=>{
-  await ensurePaths();
-  const files = await fsp.readdir(CHAT_DIR);
-  const rooms = files.filter(f=>f.endsWith('.txt')).map(f=>f.replace(/\.txt$/,''));
+  const users = await readJson(USERS_JSON, []);
+  for (const { username, tier } of updates) {
+    const i = users.findIndex(u => u.username === username);
+    if (i >= 0) users[i].tier = tier;
+  }
+  await writeJson(USERS_JSON, users);
+  res.json({ ok: true });
+});
+
+// ---------- chat ----------
+app.get('/api/chat/rooms', async (_req, res) => {
+  const files = (await fs.readdir(CHAT_DIR)).filter(f => f.endsWith('.txt'));
+  const rooms = files.map(f => path.basename(f, '.txt'));
   res.json({ rooms });
 });
-app.post('/api/chat/rooms', requireDevmode, async (req,res)=>{
-  await ensurePaths();
+
+app.post('/api/chat/rooms', async (req, res) => {
+  if (!isDev(req)) return res.status(403).json({ error: 'forbidden' });
   const room = sanitizeRoom(req.body?.room);
-  if (!room) return res.status(400).json({ error:'bad room' });
-  const file = path.join(CHAT_DIR, `${room}.txt`);
-  try { await fsp.access(file); return res.status(409).json({ error:'exists' }); }
-  catch {}
-  await saveRoom(room, []);
-  res.json({ ok:true, room });
+  const fp = path.join(CHAT_DIR, `${room}.txt`);
+  if (!fssync.existsSync(fp)) await writeJson(fp, []);
+  res.json({ ok: true, room });
 });
 
-app.get('/api/chat/rooms/:room', async (req,res)=>{
-  await ensurePaths();
+app.get('/api/chat/rooms/:room', async (req, res) => {
   const room = sanitizeRoom(req.params.room);
-  const msgs = await loadRoom(room);
-  res.json({ room, messages: msgs });
-});
-app.post('/api/chat/rooms/:room', async (req,res)=>{
-  await ensurePaths();
-  const me = req.session.user || { tier:'guest', username:'' };
-  const need = requiredChatTier();
-  if (!canAccess(me.tier, need)) return res.status(403).json({ error:'tier' });
-  const room = sanitizeRoom(req.params.room);
-  const text = (req.body?.text || '').toString().slice(0,2000).trim();
-  if (!text) return res.status(400).json({ error:'no text' });
-  const msgs = await loadRoom(room);
-  msgs.push({ ts: Date.now(), user: me.username || 'anon', text });
-  await saveRoom(room, msgs);
-  res.json({ ok:true });
+  const fp = path.join(CHAT_DIR, `${room}.txt`);
+  const msgs = await readJson(fp, []);
+  const limit = Math.max(0, Math.min(500, Number(req.query.limit || 200)));
+  res.json(msgs.slice(-limit));
 });
 
-const PORT = process.env.PORT || 3000;
-ensurePaths().then(()=> app.listen(PORT, ()=> console.log('frogs-api on', PORT)));
+app.post('/api/chat/rooms/:room', async (req, res) => {
+  if (!isLogged(req)) return res.status(401).json({ error: 'login-required' });
+  const text = (req.body?.text || '').toString().trim();
+  if (!text) return res.status(400).json({ error: 'empty' });
+  const room = sanitizeRoom(req.params.room);
+  const fp = path.join(CHAT_DIR, `${room}.txt`);
+  const msgs = await readJson(fp, []);
+  msgs.push({ ts: Date.now(), user: req.session.user.username, text });
+  await writeJson(fp, msgs);
+  res.json({ ok: true });
+});
+
+// ---------- start ----------
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`API listening on 127.0.0.1:${PORT} (SITE_ROOT=${SITE_ROOT})`);
+});
