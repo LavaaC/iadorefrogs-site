@@ -6,27 +6,23 @@
   <title>I ADORE FROGS — Desktop</title>
   <link rel="stylesheet" href="system/base.v1.css">
   <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="stylesheet" href="assets/css/base.v1.css">
-  <link rel="stylesheet" href="system/startmenu/start.v1.css">
-  <link rel="stylesheet" href="system/auth/auth.v1.css">
 </head>
 <body>
   <div id="desktop" class="desktop" aria-label="desktop"></div>
-
-  <div class="taskbar">
-    <div id="btn-start" class="start">Start</div>
-    <div id="quick" class="quick"></div>
-    <div id="tasks" class="tasks"></div>
-    <div id="clock" class="clock">00:00</div>
+  <div id="windows" class="windows-layer"></div>
+  <div id="taskbar" class="taskbar">
+    <button id="start-button" class="start-button">Start</button>
+    <div class="spacer"></div>
+    <div class="clock"></div>
   </div>
-  <div id="auth-status" class="status-outside">Guest</div>
+  <div id="start-menu" class="start-menu hidden"></div>
 
-  <!-- System scripts (order matters) -->
-<script src="system/wm.v1.js"></script>
-<script src="system/auth/auth.v1.js"></script>
-<script src="system/admin/admin.v1.js"></script>
-<script src="system/chat/chat.v1.js"></script>
-<script src="system/loader.v1.js"></script>
-<script src="system/startmenu/start.v1.js"></script>
+  <!-- ORDER MATTERS -->
+  <script src="system/wm.v1.js"></script>
+  <script src="system/auth/auth.v1.js"></script>
+  <script src="system/admin/admin.v1.js"></script>
+  <script src="system/chat/chat.v1.js"></script>
+  <script src="system/loader.v1.js"></script>
+  <script src="system/startmenu/start.v1.js"></script>
 </body>
 </html>

@@ -24,7 +24,6 @@
     ensure('start-menu','start-menu hidden'); ensure('windows','windows-layer');
     return {desktop,taskbar};
   }
-
   function startClock(){ const c=document.querySelector('.clock'); if(!c) return;
     function tick(){ c.textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
     tick(); clearInterval(startClock._t); startClock._t=setInterval(tick,1000);
@@ -33,7 +32,6 @@
   async function openAppWindow(app){
     const url=`/apps/${app.id}/layout.html`;
     if (window.WM?.open) return window.WM.open({ id:app.id, title:app.title||app.id, icon:app.icon, url });
-    // fallback window
     const win=document.createElement('div'); Object.assign(win.style,{position:'absolute',left:(app.x||60)+'px',top:(app.y||60)+'px',width:(app.w||560)+'px',height:(app.h||400)+'px',background:'#1f1f1f',color:'#fff',border:'1px solid #444',boxShadow:'0 4px 16px rgba(0,0,0,.5)',zIndex:1000});
     const bar=document.createElement('div'); bar.textContent=app.title||app.id; Object.assign(bar.style,{background:'#2b2b2b',padding:'6px 8px',cursor:'move',userSelect:'none'});
     const x=document.createElement('button'); x.textContent='✕'; Object.assign(x.style,{float:'right',background:'transparent',color:'#fff',border:'none',cursor:'pointer'}); x.onclick=()=>win.remove(); bar.appendChild(x);
@@ -53,7 +51,6 @@
     const lab=document.createElement('div'); lab.textContent=app.title||app.id;
     d.appendChild(img); d.appendChild(lab); d.onclick=()=>openAppWindow(app); desktop.appendChild(d);
   }
-
   async function buildDesktop(desktop, me){
     let ids=[]; try{ ids=await getJSON('/apps/apps.json'); }catch(e){ console.warn('apps.json failed',e); }
     if(!Array.isArray(ids)) ids=[];
@@ -69,7 +66,6 @@
 
   const boot=async()=>{
     const {desktop}=ensureChrome();
-
     let site={apiBase:'/api',devMode:false,wallpaper:'/assets/wallpapers/frogs.jpg'};
     try{ site={...site,...(await getJSON('/config/site.json'))}; }catch{}
     const API=site.apiBase||'/api'; window.API=API; window.API_BASE=API; window.siteConfig=site;
