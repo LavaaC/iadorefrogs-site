@@ -1,12 +1,38 @@
+/* Layout + Desktop */
 html,body{height:100%;margin:0}
-body{background:#0e0e0e;color:#eee;font-family:system-ui,Segoe UI,Arial,sans-serif}
+body{background:#000;color:#eee;font-family:system-ui,Segoe UI,Arial,sans-serif}
 .desktop{position:fixed;left:0;right:0;top:0;bottom:36px;display:grid;grid-auto-flow:column;grid-template-rows:repeat(5,110px);grid-auto-columns:96px;gap:10px;align-content:flex-start;padding:10px}
+
+/* Desktop icons */
 .desktop-icon{width:96px;text-align:center;cursor:pointer;user-select:none}
-.desktop-icon img{width:64px;height:64px;display:block;margin:0 auto 6px}
+.desktop-icon img{width:64px;height:64px;display:block;margin:0 auto 6px;image-rendering:pixelated}
 .desktop-icon div{font-size:12px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
+
+/* Taskbar */
 .taskbar{position:fixed;left:0;right:0;bottom:0;height:36px;background:#1b1b1b;border-top:1px solid #3b3b3b;display:flex;align-items:center;gap:8px;padding:0 8px;z-index:1500}
 .start-button{height:26px;padding:0 12px;border:1px solid #444;background:#252525;color:#eee;border-radius:4px;cursor:pointer}
-.taskbar .spacer{flex:1}
-.taskbar .clock{min-width:86px;text-align:right;font-size:12px;color:#d0d0d0}
+.spacer{display:none} /* we use #tasks instead */
+
+/* Task buttons area + buttons */
+.tasks{display:flex;gap:6px;flex:1;overflow:hidden}
+.task{display:flex;align-items:center;gap:6px;max-width:220px;height:26px;padding:0 8px;border:1px solid #444;background:#252525;color:#ddd;border-radius:4px;cursor:pointer;overflow:hidden}
+.task.active{background:#2f2f2f;border-color:#666;color:#fff}
+.task-icon{width:16px;height:16px}
+.task-title{font-size:12px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+
+/* Clock */
+.clock{min-width:86px;text-align:right;font-size:12px;color:#d0d0d0}
+
+/* Windows */
 .windows-layer{position:fixed;left:0;top:0;right:0;bottom:36px;z-index:1200}
+.window{position:absolute;left:60px;top:60px;width:560px;height:400px;background:#1f1f1f;color:#fff;border:1px solid #444;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+.window .titlebar{background:#2b2b2b;color:#fff;height:32px;line-height:32px;padding:0 8px;display:flex;align-items:center;justify-content:space-between;user-select:none;cursor:move}
+.window .titlebar .title{font-size:13px}
+.window .controls{display:flex;gap:6px}
+.window .controls .btn{width:26px;height:22px;line-height:22px;text-align:center;border:1px solid #444;background:#3a3a3a;color:#eee;border-radius:3px;cursor:pointer}
+.window .content{width:100%;height:calc(100% - 32px);background:#fff}
+.active-window .titlebar{background:#3c6df0}
+
+/* utils */
 .hidden{display:none}
+.minimized{display:none}

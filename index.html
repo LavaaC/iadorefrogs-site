@@ -5,19 +5,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>I ADORE FROGS — Desktop</title>
   <link rel="stylesheet" href="system/base.v1.css">
-  <!-- Provide a favicon or remove this line to avoid /icon.png 404s -->
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
   <div id="desktop" class="desktop" aria-label="desktop"></div>
   <div id="windows" class="windows-layer"></div>
+
   <div id="taskbar" class="taskbar">
     <button id="start-button" class="start-button">Start</button>
-    <div class="spacer"></div>
+    <div id="tasks" class="tasks"></div>   <!-- NEW: task buttons live here -->
     <div class="clock"></div>
   </div>
+
   <div id="start-menu" class="start-menu hidden"></div>
-  <!-- Load scripts in order; .v1 names guarantee fresh fetch via CDN -->
+
+  <!-- ORDER MATTERS -->
   <script src="system/wm.v1.js"></script>
   <script src="system/auth/auth.v1.js"></script>
   <script src="system/admin/admin.v1.js"></script>
