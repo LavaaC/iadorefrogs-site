@@ -21,12 +21,12 @@
     })();
 
     const btn = document.createElement('button');
-    btn.className = 'task';
+    btn.className = 'taskbtn';
     const ico = document.createElement('img');
-    ico.className = 'task-icon';
+    ico.className = 'taskicon';
     ico.src = win.dataset.icon || '/assets/favicon.png';
     const span = document.createElement('span');
-    span.className = 'task-title';
+    span.className = 'tasklabel';
     span.textContent = win.dataset.title || win.id || 'App';
     btn.appendChild(ico); btn.appendChild(span);
 

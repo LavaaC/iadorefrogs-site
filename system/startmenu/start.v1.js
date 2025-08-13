@@ -13,8 +13,8 @@
     const mk=(label,on)=>{ const el=document.createElement('div'); el.textContent=label; Object.assign(el.style,{padding:'8px 10px',cursor:'pointer'}); el.onmouseenter=()=>el.style.background='#333'; el.onmouseleave=()=>el.style.background='transparent'; el.onclick=on; menu.appendChild(el); };
     if(me.username){ mk(`Logged in as ${me.username}`,()=>{}); mk('Logout', async()=>{ try{ await window.auth?.logout?.(); }catch{} window.location.reload(); }); }
     else { mk('Login', async()=>{ const u=prompt('Username:'); if(!u)return; const p=prompt('Password:'); if(p==null)return; try{ await window.auth?.login?.(u,p); window.location.reload(); }catch{ alert('Login failed'); } }); }
-    if(me.tier==='devmode'){ mk('Admin: Apps & Tiers',()=> (window.WM?.open && window.WM.open({id:'admin-apps',title:'Admin',url:'/apps/admin/layout.html'}))||null);
-                              mk('Admin: Users',      ()=> (window.WM?.open && window.WM.open({id:'admin-users',title:'Users',url:'/apps/users/layout.html'}))||null); }
+    if(me.tier==='devmode'){mk('Admin: Apps & Tiers', () => { document.dispatchEvent(new Event('ui:openAdminApps')); });
+mk('Admin: Users', () => { document.dispatchEvent(new Event('ui:openAdminUsers')); }); }
   }
   function wire(){
     const {btn,menu}=ensureStartUI();

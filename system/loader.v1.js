@@ -57,7 +57,8 @@
     const d=document.createElement('div'); d.className='desktop-icon';
     const img=document.createElement('img'); img.src=app.icon;
     const lab=document.createElement('div'); lab.textContent=app.title||app.id;
-    d.appendChild(img); d.appendChild(lab); d.onclick=()=>openAppWindow(app); desktop.appendChild(d);
+    d.appendChild(img); d.appendChild(lab); d.onclick=()=>openAppWindow(app); const container = document.getElementById('icons') || desktop;
+container.appendChild(icon);
   }
   async function buildDesktop(desktop, me){
     let ids=[]; try{ ids=await getJSON('/apps/apps.json'); }catch(e){ console.warn('apps.json failed',e); }
