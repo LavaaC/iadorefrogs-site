@@ -1,31 +1,12 @@
-/* system/base.v1.css */
 html,body{height:100%;margin:0}
-body{background-color:#0e0e0e;color:#eee;font-family:system-ui,Segoe UI,Arial,sans-serif}
-
-/* Desktop: 5 rows, then new column (bigger icons) */
-.desktop{
-  position:fixed;left:0;right:0;top:0;bottom:36px;
-  display:grid;grid-auto-flow:column;grid-template-rows:repeat(5,110px);
-  grid-auto-columns:96px;gap:10px;align-content:flex-start;padding:10px;
-}
+body{background:#0e0e0e;color:#eee;font-family:system-ui,Segoe UI,Arial,sans-serif}
+.desktop{position:fixed;left:0;right:0;top:0;bottom:36px;display:grid;grid-auto-flow:column;grid-template-rows:repeat(5,110px);grid-auto-columns:96px;gap:10px;align-content:flex-start;padding:10px}
 .desktop-icon{width:96px;text-align:center;cursor:pointer;user-select:none}
 .desktop-icon img{width:64px;height:64px;display:block;margin:0 auto 6px}
 .desktop-icon div{font-size:12px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
-
-/* Taskbar: flush + clock on the right */
-.taskbar{
-  position:fixed;left:0;right:0;bottom:0;height:36px;
-  background:#1b1b1b;border-top:1px solid #3b3b3b;
-  display:flex;align-items:center;gap:8px;padding:0 8px;z-index:1500
-}
-.start-button{
-  height:26px;padding:0 12px;border:1px solid #444;background:#252525;color:#eee;border-radius:4px;cursor:pointer
-}
+.taskbar{position:fixed;left:0;right:0;bottom:0;height:36px;background:#1b1b1b;border-top:1px solid #3b3b3b;display:flex;align-items:center;gap:8px;padding:0 8px;z-index:1500}
+.start-button{height:26px;padding:0 12px;border:1px solid #444;background:#252525;color:#eee;border-radius:4px;cursor:pointer}
 .taskbar .spacer{flex:1}
 .taskbar .clock{min-width:86px;text-align:right;font-size:12px;color:#d0d0d0}
-
-/* Windows layer */
 .windows-layer{position:fixed;left:0;top:0;right:0;bottom:36px;z-index:1200}
-
-/* Hidden utility */
 .hidden{display:none}
