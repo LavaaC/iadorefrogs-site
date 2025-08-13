@@ -5,37 +5,28 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>I ADORE FROGS — Desktop</title>
 
-  <!-- Favicon (provide assets/favicon.png or change this path) -->
   <link rel="icon" type="image/png" href="assets/favicon.png">
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="assets/css/base.css">
-  <link rel="stylesheet" href="system/startmenu/start.css">
-  <link rel="stylesheet" href="system/auth/auth.css">
+  <link rel="stylesheet" href="assets/css/base.css?v=dev25">
+  <link rel="stylesheet" href="system/startmenu/start.css?v=dev25">
+  <link rel="stylesheet" href="system/auth/auth.css?v=dev25">
 </head>
 <body>
   <div id="desktop" class="desktop" aria-label="desktop"></div>
 
-<div class="taskbar">
-  <div id="btn-start" class="start">Start</div>
-  <div id="quick" class="quick"></div>     <!-- Quick Launch icons go here -->
-  <div id="tasks" class="tasks"></div>
-  <div id="clock" class="clock">00:00</div>
-</div>
+  <div class="taskbar">
+    <div id="btn-start" class="start">Start</div>
+    <div id="quick" class="quick"></div>
+    <div id="tasks" class="tasks"></div>
+    <div id="clock" class="clock">00:00</div>
+  </div>
+  <div id="auth-status" class="status-outside">Guest</div>
 
-<!-- status sits just above the bar, right-aligned -->
-<div id="auth-status" class="status status-outside">Guest</div>
-
-
-
-  <!-- Scripts (order matters) -->
-<script src="system/wm.js?v=dev18"></script>
-<script src="system/auth/auth.js?v=dev18"></script>
-<script src="system/startmenu/start.js?v=dev18"></script>
-<script src="system/admin/admin.js?v=dev18"></script>
-<script src="system/chat/chat.js?v=dev18"></script>   <!-- keep only if the file exists -->
-<script src="system/loader.js?v=dev18"></script>
-
-
+  <!-- System scripts (order matters) -->
+  <script src="system/wm.js?v=dev25"></script>
+  <script src="system/auth/auth.js?v=dev25"></script>
+  <script src="system/admin/admin.js?v=dev25"></script>
+  <script src="system/chat/chat.js?v=dev25"></script>
+  <script src="system/loader.js?v=dev25"></script>
+  <script src="system/startmenu/start.js?v=dev25"></script>
 </body>
 </html>

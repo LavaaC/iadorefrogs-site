@@ -1,7 +1,10 @@
 {
   "wallpaper": "assets/wallpapers/frogs.jpg",
   "appsAssetsBase": "assets/apps",
-  "devTier": "unverified",
   "devMode": true,
-  "defaultOrder": ["info","map","photos","music","videogames","socials","books","frogs","tierlist","chess","catloafs","calendar","profile","chat","paint","food"]
+  "apiBase": "",
+  "defaultOrder": [
+    "info","map","photos","music","videogames","socials","books","frogs",
+    "tierlist","chess","catloafs","calendar","profile","chat","paint","food"
+  ]
 }

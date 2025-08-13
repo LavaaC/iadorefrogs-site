@@ -15,7 +15,7 @@
     if (!w) {
       w = document.createElement("div");
       w.className = "window"; w.id = "win-admin-apps"; w.dataset.title = "Admin: Apps & Tiers";
-      w.style.left="100px"; w.style.top="70px"; w.style.width="640px";
+      w.style.left="100px"; w.style.top="70px"; w.style.width="720px";
       w.innerHTML = `
         <div class="titlebar"><div class="title">Admin: Apps & Tiers</div><div class="controls"><div class="btn" data-min>_</div><div class="btn" data-close>×</div></div></div>
         <div class="content">
@@ -56,11 +56,8 @@
       const isHidden = admin.hidden.includes(id);
       const isPinned = admin.pinned.includes(id);
       return `
-        <div class="aa-row" data-id="${id}" style="display:grid;grid-template-columns:64px 64px 1fr auto auto auto auto;gap:6px;align-items:center;margin-bottom:6px">
-          <div>
-            <button class="aa-up">▲</button>
-            <button class="aa-down">▼</button>
-          </div>
+        <div class="aa-row" data-id="${id}" style="display:grid;grid-template-columns:64px 1fr auto auto auto auto;gap:6px;align-items:center;margin-bottom:6px">
+          <div><button class="aa-up">▲</button> <button class="aa-down">▼</button></div>
           <div><b>${m.title||id}</b><div style="font-size:12px;color:#555">${id}</div></div>
           <label style="justify-self:end"><input type="checkbox" class="aa-show" ${isHidden?"":"checked"}> Show</label>
           <label><input type="checkbox" class="aa-pin" ${isPinned?"checked":""}> Pin</label>
@@ -73,7 +70,6 @@
         </div>`;
     }).join("");
 
-    // reorder
     host.onclick = (e)=>{
       const row = e.target.closest(".aa-row"); if (!row) return;
       if (e.target.classList.contains("aa-up")) {
@@ -99,9 +95,10 @@
       const payload = { order:newOrder, hidden:newHidden, pinned:newPinned, perApp };
       try {
         if (useApi) {
-          await fetch(`${site.apiBase}/admin/settings`, {
+          const r = await fetch(`${site.apiBase}/admin/settings`, {
             method:"PUT", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload)
-          }).then(r=>{ if(!r.ok) throw new Error("save failed"); });
+          });
+          if(!r.ok) throw new Error("save failed");
         } else {
           localStorage.setItem("frogs_admin", JSON.stringify(payload));
         }
@@ -135,16 +132,13 @@
 
     let users = [];
     try {
-      if (useApi) {
-        users = await fetchJSON(`${site.apiBase}/admin/users`);
-      } else {
-        users = JSON.parse(localStorage.getItem("frogs_users")||"[]");
-      }
+      if (useApi) users = await fetchJSON(`${site.apiBase}/admin/users`);
+      else users = JSON.parse(localStorage.getItem("frogs_users")||"[]");
     } catch {}
 
     const host = $("#au-list");
     host.innerHTML = users.map(u=>{
-      const t = u.tier || "unverified";
+      const t = (u.tier || "unverified");
       return `
         <div class="au-row" data-username="${u.username}" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;margin-bottom:6px">
           <div><b>${u.username}</b> <span style="color:#666">${u.name||""}</span></div>
@@ -157,11 +151,11 @@
       const updates = rows.map(r=>({ username: r.dataset.username, tier: r.querySelector(".au-tier").value }));
       try {
         if (useApi) {
-          await fetch(`${site.apiBase}/admin/users`, {
+          const r = await fetch(`${site.apiBase}/admin/users`, {
             method:"PUT", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ updates })
-          }).then(r=>{ if(!r.ok) throw new Error("save failed"); });
+          });
+          if(!r.ok) throw new Error("save failed");
         } else {
-          // localStorage update
           const all = JSON.parse(localStorage.getItem("frogs_users")||"[]");
           updates.forEach(up=>{
             const u = all.find(x=>x.username.toLowerCase()===up.username.toLowerCase());
@@ -169,18 +163,31 @@
           });
           localStorage.setItem("frogs_users", JSON.stringify(all));
         }
-        alert("Saved. Reloading…"); location.reload();
+
+        // NEW: refresh current session if changed
+        const me = window.__ME__;
+        if (me && me.username) {
+          const meLower = me.username.toLowerCase();
+          const hit = updates.find(u => u.username.toLowerCase() === meLower);
+          if (hit) {
+            window.__ME__ = Object.assign({}, me, { tier: hit.tier });
+            window.__USER_TIER__ = hit.tier;
+            document.dispatchEvent(new CustomEvent("auth:me", { detail: window.__ME__ }));
+          }
+        }
+
+        alert("Saved. Reloading…");
+        location.reload();
       } catch(err){ alert("Save failed: "+err.message); }
     };
 
     WM.openWindow(w);
   }
 
-  // Listen from Start menu
   document.addEventListener("ui:openAdminApps", openAdminApps);
   document.addEventListener("ui:openAdminUsers", openAdminUsers);
 
-  // Provide a user-level Customize window (as before) if you want:
-  document.addEventListener("ui:openCustomizeUser", ()=> document.dispatchEvent(new Event("ui:openCustomize"))); // reuse your existing user customize if present
-  document.addEventListener("ui:openBug", ()=> document.dispatchEvent(new Event("openBug"))); // reuse bug window from start.js if present
+  // pass-through for other windows you already have
+  document.addEventListener("ui:openCustomizeUser", ()=> document.dispatchEvent(new Event("ui:openCustomize")));
+  document.addEventListener("ui:openBug", ()=> document.dispatchEvent(new Event("openBug")));
 })();
