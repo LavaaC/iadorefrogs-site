@@ -33,10 +33,13 @@ body{
 }
 
 /* Icons grid */
-#icons{
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(92px,1fr));
-  gap:18px; padding:16px; max-width:860px;
-  position:relative; z-index:1
+#icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, 92px); /* up to 5 columns of fixed 92px icons */
+  gap: 18px;
+  padding: 16px;
+  max-width: calc(92px * 5 + 18px * 4);  /* limit width to 5 icons per row (≈532px) */
+  justify-content: start;               /* align icons to the left */
 }
 .icon{display:flex; flex-direction:column; align-items:center; gap:6px; color:#fff; cursor:default}
 
@@ -187,3 +190,63 @@ body{
 .ph{display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:12px}
 .ph-box{height:100px; background:#e8e8e8; border:2px inset var(--border-mid)}
 .ph-cap{font-size:12px; color:#222}
+
+
+/* --- Windows 95 Start menu -------------------------------------------- */
+#start-menu {
+  position: absolute;
+  left: 6px;
+  bottom: 38px;                 /* sits just above the 36px taskbar */
+  width: 210px;
+  background: var(--win);
+  border: 2px outset var(--border-light);
+  box-shadow: 4px 4px 0 rgba(0,0,0,.25);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 9999;               /* above windows/taskbar */
+}
+
+/* hidden state the JS toggles */
+#start-menu.hidden { display: none; }
+
+/* If your start.v1.js ever uses <button> items, they’ll look Win95 too */
+#start-menu button {
+  background: var(--win);
+  color: var(--text);
+  border: 2px outset var(--border-light);
+  padding: 4px 8px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+#start-menu button:active {
+  border: 2px inset var(--border-light);
+}
+
+/* Your current start.v1.js creates <div> items.
+   Style direct children so they look like Win95 menu rows. */
+#start-menu > div {
+  padding: 6px 8px;
+  line-height: 1.2;
+  cursor: pointer;
+  user-select: none;
+  /* keep border transparent by default; JS hover can still override */
+  border: 2px solid transparent;
+}
+#start-menu > div:active {
+  /* pressed look if the user clicks and holds */
+  border: 2px inset var(--border-light);
+  background: #dcdcdc;
+  color: #000;
+}
+
+/* Thin rule if you ever insert separators (optional) */
+#start-menu hr {
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--border-dark);
+  border-bottom: 1px solid var(--border-light);
+  margin: 4px 2px;
+}

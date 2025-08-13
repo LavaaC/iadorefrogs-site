@@ -53,13 +53,35 @@
   }
 
   function iconPath(id, icon){ if(!icon||!icon.trim()) return `/assets/apps/${id}/icon.png`; if(icon.startsWith('/')||icon.startsWith('http')) return icon; return `/assets/apps/${id}/${icon}`; }
-  function addIcon(desktop, app){
-    const d=document.createElement('div'); d.className='desktop-icon';
-    const img=document.createElement('img'); img.src=app.icon;
-    const lab=document.createElement('div'); lab.textContent=app.title||app.id;
-    d.appendChild(img); d.appendChild(lab); d.onclick=()=>openAppWindow(app); const container = document.getElementById('icons') || desktop;
-container.appendChild(icon);
-  }
+  function addIcon(desktop, app) {
+    // Create icon container using existing CSS classes
+    const iconEl = document.createElement('div');
+    iconEl.className = 'icon';  // Windows 95 icon style container (.icon)
+    
+    // Create inner image wrapper and image
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'icon-img';  // fixed 64x64 icon frame
+    const img = document.createElement('img');
+    img.src = app.icon;
+    img.className = 'desk-icon-img'; // actual icon image (pixelated style)
+    imgWrap.appendChild(img);
+    
+    // Create label for the icon
+    const label = document.createElement('div');
+    label.className = 'label';  // Windows 95 style label (white text with shadow)
+    label.textContent = app.title || app.id;
+    
+    // Assemble icon element
+    iconEl.appendChild(imgWrap);
+    iconEl.appendChild(label);
+    // Single-click to open the app window
+    iconEl.onclick = () => openAppWindow(app);
+    
+    // Append to the #icons container (or desktop as fallback)
+    const container = document.getElementById('icons') || desktop;
+    container.appendChild(iconEl);
+}
+
   async function buildDesktop(desktop, me){
     let ids=[]; try{ ids=await getJSON('/apps/apps.json'); }catch(e){ console.warn('apps.json failed',e); }
     if(!Array.isArray(ids)) ids=[];
