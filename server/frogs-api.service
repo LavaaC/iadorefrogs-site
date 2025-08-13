@@ -1,0 +1,17 @@
+[Unit]
+Description=Frogs API (iadorefrogs)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+Environment=SITE_ROOT=/var/www/html
+Environment=PORT=3000
+Environment=SESSION_SECRET=CHANGE_ME
+WorkingDirectory=/opt/frogs-api
+ExecStart=/usr/bin/node /opt/frogs-api/server.js
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
