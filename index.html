@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>I ADORE FROGS — Desktop</title>
   <link rel="stylesheet" href="system/base.v1.css">
+  <!-- Provide a favicon or remove this line to avoid /icon.png 404s -->
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -16,8 +17,7 @@
     <div class="clock"></div>
   </div>
   <div id="start-menu" class="start-menu hidden"></div>
-
-  <!-- ORDER MATTERS -->
+  <!-- Load scripts in order; .v1 names guarantee fresh fetch via CDN -->
   <script src="system/wm.v1.js"></script>
   <script src="system/auth/auth.v1.js"></script>
   <script src="system/admin/admin.v1.js"></script>

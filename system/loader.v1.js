@@ -2,11 +2,13 @@
 (() => {
   async function _fetchJSON(url, opts={}) {
     const r = await fetch(url, { credentials:'include', cache:'no-store', ...opts });
-    if (!r.ok) throw new Error(String(r.status)); return r.json();
+    if (!r.ok) throw new Error(String(r.status));
+    return r.json();
   }
   async function _sendJSON(url, method, data) {
     const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, credentials:'include', body:data!=null?JSON.stringify(data):undefined });
-    if (!r.ok) throw new Error(String(r.status)); return r.json();
+    if (!r.ok) throw new Error(String(r.status));
+    return r.json();
   }
   window.getJSON=(u,o)=>_fetchJSON(u,o); window.postJSON=(u,d)=>_sendJSON(u,'POST',d); window.putJSON=(u,d)=>_sendJSON(u,'PUT',d);
 
@@ -18,13 +20,16 @@
   function ensureChrome(){
     const desktop=ensure('desktop','desktop');
     const taskbar=ensure('taskbar','taskbar');
-    if(!document.getElementById('start-button')){ const b=document.createElement('button'); b.id='start-button'; b.className='start-button'; b.textContent='Start'; taskbar.appendChild(b); }
+    if(!document.getElementById('start-button')){
+      const b=document.createElement('button'); b.id='start-button'; b.className='start-button'; b.textContent='Start'; taskbar.appendChild(b);
+    }
     if(!document.querySelector('.spacer')){ taskbar.appendChild(Object.assign(document.createElement('div'),{className:'spacer'})); }
     if(!document.querySelector('.clock')){ taskbar.appendChild(Object.assign(document.createElement('div'),{className:'clock'})); }
     ensure('start-menu','start-menu hidden'); ensure('windows','windows-layer');
     return {desktop,taskbar};
   }
-  function startClock(){ const c=document.querySelector('.clock'); if(!c) return;
+  function startClock(){
+    const c=document.querySelector('.clock'); if(!c) return;
     function tick(){ c.textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
     tick(); clearInterval(startClock._t); startClock._t=setInterval(tick,1000);
   }
@@ -32,12 +37,15 @@
   async function openAppWindow(app){
     const url=`/apps/${app.id}/layout.html`;
     if (window.WM?.open) return window.WM.open({ id:app.id, title:app.title||app.id, icon:app.icon, url });
-    const win=document.createElement('div'); Object.assign(win.style,{position:'absolute',left:(app.x||60)+'px',top:(app.y||60)+'px',width:(app.w||560)+'px',height:(app.h||400)+'px',background:'#1f1f1f',color:'#fff',border:'1px solid #444',boxShadow:'0 4px 16px rgba(0,0,0,.5)',zIndex:1000});
+    const win=document.createElement('div');
+    Object.assign(win.style,{position:'absolute',left:(app.x||60)+'px',top:(app.y||60)+'px',width:(app.w||560)+'px',height:(app.h||400)+'px',background:'#1f1f1f',color:'#fff',border:'1px solid #444',boxShadow:'0 4px 16px rgba(0,0,0,.5)',zIndex:1000});
     const bar=document.createElement('div'); bar.textContent=app.title||app.id; Object.assign(bar.style,{background:'#2b2b2b',padding:'6px 8px',cursor:'move',userSelect:'none'});
-    const x=document.createElement('button'); x.textContent='✕'; Object.assign(x.style,{float:'right',background:'transparent',color:'#fff',border:'none',cursor:'pointer'}); x.onclick=()=>win.remove(); bar.appendChild(x);
+    const x=document.createElement('button'); x.textContent='✕'; Object.assign(x.style,{float:'right',background:'transparent',color:'#fff',border:'none',cursor:'pointer'}); x.onclick=()=>win.remove();
+    bar.appendChild(x);
     const body=document.createElement('div'); Object.assign(body.style,{width:'100%',height:'calc(100% - 32px)',background:'#fff'});
-    const iframe=document.createElement('iframe'); Object.assign(iframe.style,{width:'100%',height:'100%',border:0}); iframe.src=url;
-    body.appendChild(iframe); win.appendChild(bar); win.appendChild(body); document.getElementById('windows').appendChild(win);
+    const iframe=document.createElement('iframe'); Object.assign(iframe.style,{width:'100%',height:'100%',border:'0'}); iframe.src=url;
+    body.appendChild(iframe); win.appendChild(bar); win.appendChild(body);
+    document.getElementById('windows').appendChild(win);
     let sx=0,sy=0,ox=0,oy=0,on=false;
     bar.addEventListener('mousedown',e=>{on=true;sx=e.clientX;sy=e.clientY;ox=win.offsetLeft;oy=win.offsetTop;e.preventDefault();});
     window.addEventListener('mousemove',e=>{if(!on)return;win.style.left=(ox+e.clientX-sx)+'px';win.style.top=(oy+e.clientY-sy)+'px';});
@@ -69,13 +77,12 @@
     let site={apiBase:'/api',devMode:false,wallpaper:'/assets/wallpapers/frogs.jpg'};
     try{ site={...site,...(await getJSON('/config/site.json'))}; }catch{}
     const API=site.apiBase||'/api'; window.API=API; window.API_BASE=API; window.siteConfig=site;
-
-    try{ const wp=site.wallpaper||'/assets/wallpapers/frogs.jpg';
-      Object.assign(document.body.style,{backgroundImage:`url('${wp}')`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'});}catch{}
-
+    try{
+      const wp=site.wallpaper||'/assets/wallpapers/frogs.jpg';
+      Object.assign(document.body.style,{backgroundImage:`url('${wp}')`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'});
+    }catch{}
     let me=guest; try{ me=await getJSON(`${API}/me`);}catch{} window.currentUser=me;
     if(me.tier==='devmode'){ getJSON(`${API}/admin/settings`).then(s=>window.siteAdmin=s).catch(()=>{}); }
-
     await buildDesktop(desktop, me);
     startClock();
     try{ window.dispatchEvent(new CustomEvent('auth:me',{detail:me})); }catch{}
