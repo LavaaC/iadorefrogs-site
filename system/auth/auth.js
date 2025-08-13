@@ -37,7 +37,7 @@
           <label>Password <input id="ca-pass" type="password"></label><br>
           <label>Confirm Password <input id="ca-pass2" type="password"></label><br>
           <label>Name I know you as <input id="ca-name"></label><br>
-          <label>Date we met (mm/dd/yy) <input id="ca-met" placeholder="mm/dd/yy"></label><br>
+          <label>Birthday (mm/dd) <input id="ca-met" placeholder="mm/dd"></label><br>
           <label><input id="ca-check" type="checkbox"> This is not (your) password for everything else because giving me that would be really dumb</label><br>
           <button id="ca-submit">Create</button>
         </div>`;
