@@ -1,29 +1,77 @@
-(async () => {
-  // small helper
-  const getJSON = async (url, opts = {}) => {
-    const r = await fetch(url, { credentials: 'include', ...opts });
+sudo tee /var/www/html/system/loader.js >/dev/null <<'EOF'
+// system/loader.js
+(function () {
+  // ---- GLOBAL HELPERS (for admin.js/chat.js/etc.) ----
+  async function _fetchJSON(url, opts = {}) {
+    const r = await fetch(url, { credentials: 'include', cache: 'no-store', ...opts });
     if (!r.ok) throw new Error(`${r.status}`);
     return r.json();
-  };
+  }
+  async function _sendJSON(url, method, data) {
+    const r = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: data != null ? JSON.stringify(data) : undefined,
+    });
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json();
+  }
+  // expose globally so other scripts can use them
+  window.getJSON = (url, opts) => _fetchJSON(url, opts);
+  window.postJSON = (url, data) => _sendJSON(url, 'POST', data);
+  window.putJSON  = (url, data) => _sendJSON(url, 'PUT',  data);
 
-  // 1) load site config
-  let site = { apiBase: '/api', devMode: false };
-  try { site = await getJSON('/config/site.json'); } catch {}
+  // ---- SAFE BOOT ----
+  const guest = { username: null, name: 'Guest', tier: 'guest' };
 
-  const API = site.apiBase || '/api';
+  async function loadSite() {
+    // 1) Config (fallback-safe)
+    let site = { apiBase: '/api', devMode: false, wallpaper: '/assets/wallpapers/frogs.jpg' };
+    try {
+      const cfg = await getJSON('/config/site.json');
+      site = { ...site, ...cfg };
+    } catch (e) {
+      console.warn('site.json load failed, using defaults', e);
+    }
 
-  // 2) find current user (never from localStorage)
-  let me = { username: null, tier: 'guest', name: 'Guest' };
-  try { me = await getJSON(`${API}/me`); } catch {}
+    const API = site.apiBase || '/api';
+    window.API = API;            // for legacy code
+    window.API_BASE = API;       // extra alias some code may use
+    window.siteConfig = site;
 
-  // 3) only devs may read admin settings; on any error, just continue
-  let admin = null;
-  if (me.tier === 'devmode') {
-    try { admin = await getJSON(`${API}/admin/settings`); } catch {}
+    // 2) Current user (server session only)
+    let me = guest;
+    try { me = await getJSON(`${API}/me`); } catch (e) { console.warn('/api/me failed', e); }
+    window.currentUser = me;
+
+    // 3) Admin settings only for devs (never block boot)
+    let admin = null;
+    if (me.tier === 'devmode') {
+      try { admin = await getJSON(`${API}/admin/settings`); }
+      catch (e) { console.warn('/api/admin/settings failed (non-blocking)', e); }
+    }
+    window.siteAdmin = admin;
+
+    // 4) Apply wallpaper (no-crash)
+    try {
+      const wp = site.wallpaper || '/assets/wallpapers/frogs.jpg';
+      Object.assign(document.body.style, {
+        backgroundImage: `url('${wp}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      });
+    } catch (e) { console.warn('wallpaper failed', e); }
+
+    // 5) Notify the rest of the UI
+    try {
+      window.dispatchEvent(new CustomEvent('auth:me', { detail: me }));
+    } catch (e) { console.warn('auth:me dispatch failed', e); }
   }
 
-  // 4) continue boot regardless of admin fetch result
-  // TODO: initialize desktop, apps, wallpaper using `admin` if present, else defaults
-  window.dispatchEvent(new CustomEvent('auth:me', { detail: me }));
-  // ... your existing desktop boot here ...
+  document.addEventListener('DOMContentLoaded', () => {
+    loadSite().catch(err => console.error('loadSite fatal', err));
+  });
 })();
+EOF
