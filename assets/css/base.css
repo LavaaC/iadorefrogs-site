@@ -22,7 +22,8 @@ body{
   margin:0;
   background:var(--bg) center/cover no-repeat fixed;
   font:13px/1.35 Tahoma, "MS Sans Serif", "Segoe UI", Arial, sans-serif;
-  color:#000; user-select:none; overflow:hidden;
+  color:#000; 
+  user-select:none; overflow:hidden;
 }
 
 /* desktop area leaves room for taskbar + band */
@@ -155,7 +156,7 @@ body{
   border:2px solid var(--border-dark);
   outline:1px solid var(--border-light);
   box-shadow:6px 6px 0 var(--shadow);
-  display:none;
+  
   min-width:280px; max-width:min(94vw, 900px);
   z-index:100;
 }

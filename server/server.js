@@ -94,6 +94,30 @@ app.post('/api/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
+app.post('/api/register', async (req, res) => {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+        return res.status(400).json({ error: 'missing-fields' });
+    }
+    const users = await readJson(USERS_JSON, []);
+    // Check if username already exists (case-sensitive match)
+    if (users.find(u => u.username === username)) {
+        return res.status(409).json({ error: 'username-taken' });
+    }
+    // Create new user object
+    const newUser = { username, name: username, tier: 'unverified' };
+    if (bcrypt) {
+        newUser.passwordHash = await bcrypt.hash(password, 10);
+    } else {
+        newUser.password = password;
+    }
+    users.push(newUser);
+    await writeJson(USERS_JSON, users);
+    // Log the new user in by initializing session
+    req.session.user = { username: newUser.username, name: newUser.name, tier: newUser.tier };
+    res.json(req.session.user);
+});
+
 app.get('/api/me', (req, res) => {
   if (!req.session.user) return res.json({ username: null, name: 'Guest', tier: 'guest' });
   res.json(req.session.user);
