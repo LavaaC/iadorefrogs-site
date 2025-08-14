@@ -1,4 +1,4 @@
-// Chat — GH Pages uses localStorage; Pi uses /api. Posting requires verified/closefriend/devmode.
+// Chat — GH Pages uses localStorage; Pi uses /api. Posting requires tier 'verified' or higher (verified, closefriend, or devmode).
 (() => {
   const usingGitHub = location.hostname.endsWith("github.io");
   const $ = (sel, root=document) => root.querySelector(sel);
@@ -76,7 +76,7 @@
 
     function updateBanner(){
       if (canPost()) bannerEl.style.display = "none";
-      else { bannerEl.textContent = "Read-only. Posting requires tier: verified (or higher)."; bannerEl.style.display = ""; }
+      else { bannerEl.textContent = "Read-only. Posting requires tier: verified, closefriend, or devmode."; bannerEl.style.display = ""; }
     }
     updateBanner();
     document.addEventListener("auth:me", updateBanner);
@@ -106,7 +106,7 @@
     }
 
     async function send(){
-      if (!canPost()) { alert("Posting requires verified (or higher)."); return; }
+      if (!canPost()) { alert("Posting requires tier: verified, closefriend, or devmode."); return; }
       const t = txtEl.value.trim(); if (!t) return;
       const user = me()?.username || "guest";
       const msg = { user, text: t.slice(0,1000), ts: Date.now() };
@@ -115,7 +115,7 @@
       await drawMessages();
     }
     async function makeRoom(){
-      if (!canPost()) { alert("Creating rooms requires verified (or higher)."); return; }
+      if (!canPost()) { alert("Creating rooms requires tier: verified, closefriend, or devmode."); return; }
       const nm = newNameEl.value.trim(); if (!nm) return;
       const n = await createRoom(nm);
       newNameEl.value = "";
