@@ -29,7 +29,8 @@
       });
     } else {
       const openAuth = (hash) => {
-        const h = window.innerHeight ? Math.max(300, window.innerHeight - 40) : 520;
+        const h0 = window.innerHeight ? Math.max(300, window.innerHeight - 40) : 520;
+        const h = Math.max(150, Math.floor(h0/2));
         const inst = window.WM?.open({
           id: 'auth',
           title: 'Account',
@@ -50,7 +51,7 @@
         title: 'Customize',
         icon: 'assets/apps/profile/icon.png',
         url: 'apps/customize/layout.html',
-        w: 520, h: 420, x: 120, y: 110
+        w: 520, h: 520, x: 120, y: 110
       });
     });
     mkItem(menu, 'Bug Report', () => {
