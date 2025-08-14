@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=www-data
 Group=www-data
-Environment=SITE_ROOT=/var/www/html
+Environment=SITE_ROOT=/home/lavaa/iadorefrogs-site
 Environment=PORT=3000
 Environment=SESSION_SECRET=CHANGE_ME
 WorkingDirectory=/opt/frogs-api

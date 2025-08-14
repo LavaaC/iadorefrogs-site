@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SITE_ROOT="/var/www/html"
+SITE_ROOT="/home/lavaa/iadorefrogs-site"
 API_DIR="/opt/frogs-api"
 NGX_SITE="/etc/nginx/sites-available/iadorefrogs"
 SERVICE="/etc/systemd/system/frogs-api.service"
