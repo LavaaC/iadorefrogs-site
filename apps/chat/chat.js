@@ -5,7 +5,7 @@
   function $(sel, root=document){ return root.querySelector(sel); }
   function me(){ return window.__ME__ || null; }
   function tier(){ return (window.__USER_TIER__ || "guest").toLowerCase(); }
-  function canPost(){ return ["verified","closefriend","devmode"].includes(tier()); }
+  function canPost(){ return !!me(); }
 
   const SITE = () => window.__SITE__ || {};
   const useApi = () => !!SITE().apiBase && !usingGitHub;
@@ -70,7 +70,8 @@
   async function apiGetMsgs(room){
     const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {cache:"no-cache", credentials:"include"});
     if (!r.ok) throw new Error("msgs "+r.status);
-    return r.json();
+    const data = await r.json();
+    return Array.isArray(data) ? data : (data.messages || data.msgs || []);
   }
   async function apiPostMsg(room, msg){
     const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {
@@ -115,7 +116,7 @@
       if (canPost()) {
         bannerEl.style.display = "none";
       } else {
-        bannerEl.textContent = "Read-only. Posting requires tier: verified, closefriend, or devmode.";
+        bannerEl.textContent = "Read-only. Please log in to post messages.";
         bannerEl.style.display = "";
       }
     }
@@ -139,7 +140,8 @@
     }
 
     async function drawMessages(){
-      const msgs = await getMsgs(current);
+      const raw = await getMsgs(current);
+      const msgs = Array.isArray(raw) ? raw : (raw?.messages || raw?.msgs || []);
       logEl.innerHTML = msgs.map(m =>
         `<div class="msg"><b>${escapeHtml(m.user)}</b> <span class="ts">${fmt(m.ts)}</span><div class="body">${escapeHtml(m.text)}</div></div>`
       ).join("");
@@ -147,7 +149,7 @@
     }
 
     async function send(){
-      if (!canPost()) { alert("Posting requires tier: verified, closefriend, or devmode."); return; }
+      if (!canPost()) { alert("Please log in to post messages."); return; }
       const t = txtEl.value.trim();
       if (!t) return;
       const user = me()?.username || "guest";
@@ -158,7 +160,7 @@
     }
 
     async function makeRoom(){
-      if (!canPost()) { alert("Creating rooms requires tier: verified, closefriend, or devmode."); return; }
+      if (!canPost()) { alert("Please log in to create rooms."); return; }
       const nm = newNameEl.value.trim();
       if (!nm) return;
       const n = await createRoom(nm);
