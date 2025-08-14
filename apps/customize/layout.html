@@ -26,25 +26,21 @@
     <button id="cancel">Cancel</button>
   </div>
   <script>
-    const KEY='desktop_settings';
-    function load(){
-      if(window.top.currentUser?.username){
-        try{return JSON.parse(window.top.localStorage.getItem(KEY))||{};}catch{return{};}
-      }
-      return window.top._tempSettings||{};
+    async function load(){
+      try{return await window.top.getJSON('/api/settings');}catch{return{};}
     }
-    function save(s){
-      if(window.top.currentUser?.username){
-        try{window.top.localStorage.setItem(KEY, JSON.stringify(s));}catch{}
-      }else{
-        window.top._tempSettings=s;
-      }
+    async function save(s){
+      try{await window.top.putJSON('/api/settings', s);}catch{}
     }
 
     async function init(){
+      if(!window.top.currentUser?.username){
+        document.body.innerHTML='<p>Please log in to customize.</p>';
+        return;
+      }
       const listEl=document.getElementById('apps');
       const ids=await (await fetch('../apps.json')).json();
-      const settings=load();
+      const settings=await load();
 
       const order=(settings.pinnedOrder&&settings.pinnedOrder.filter(id=>ids.includes(id)))||ids.slice();
       ids.forEach(id=>{if(!order.includes(id)) order.push(id);});
@@ -69,8 +65,8 @@
           const next=row.nextElementSibling; if(next) listEl.insertBefore(next,row);
         }
       });
-      document.getElementById('save').onclick=()=>{
-        const s=load();
+      document.getElementById('save').onclick=async()=>{
+        const s=await load();
         Array.from(listEl.children).forEach(row=>{
           const id=row.dataset.id;
           s[id]=s[id]||{};
@@ -78,8 +74,8 @@
           s[id].pinned=row.querySelector('.pin').checked;
         });
         s.pinnedOrder=Array.from(listEl.children).map(r=>r.dataset.id);
-        save(s);
-        window.top.applyDesktopSettings?.();
+        await save(s);
+        await window.top.applyDesktopSettings?.();
         window.top.WM?.close('customize');
       };
       document.getElementById('cancel').onclick=()=>{window.top.WM?.close('customize');};
