@@ -35,7 +35,7 @@
           title: 'Account',
           icon: 'assets/apps/auth/icon.png',
           url: `apps/auth/layout.html${hash}`,
-          w: 420, h: 420, x: 80, y: 80
+          w: 420, h: 460, x: 80, y: 80
         });
         if (inst?.iframe) inst.iframe.src = `apps/auth/layout.html${hash}`;
       };
@@ -48,7 +48,7 @@
       window.WM?.open({
         id: 'customize',
         title: 'Customize',
-        icon: 'assets/apps/customize/icon.png',
+        icon: 'assets/apps/profile/icon.png',
         url: 'apps/customize/layout.html',
         w: 520, h: 420, x: 120, y: 110
       });
@@ -57,7 +57,7 @@
       window.WM?.open({
         id: 'bug',
         title: 'Bug Report',
-        icon: 'assets/apps/bug/icon.png',
+        icon: 'assets/apps/info/icon.png',
         url: 'apps/bug/layout.html',
         w: 520, h: 420, x: 140, y: 130
       });
