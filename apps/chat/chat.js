@@ -49,6 +49,7 @@
   }
 
   // ---- API adapters (Pi) ----
+
   async function apiListRooms(){
     const r = await fetch(`${SITE().apiBase}/chat/rooms`, {cache:"no-cache", credentials:"include"});
     if (!r.ok) throw new Error("rooms "+r.status);
@@ -80,6 +81,7 @@
     });
     if (!r.ok) throw new Error("post "+r.status);
   }
+
 
   // ---- shared helpers ----
   function sanitizeRoom(n){ return String(n||"").trim().toLowerCase().replace(/[^a-z0-9_-]/g,"").slice(0,40); }

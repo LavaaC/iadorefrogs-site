@@ -45,6 +45,7 @@
   }
 
   // API backend
+
   async function apiListRooms(){
     const r = await fetch(`${SITE().apiBase}/chat/rooms`, {cache:"no-cache", credentials:"include"});
     if(!r.ok) throw new Error("rooms "+r.status);
@@ -76,6 +77,7 @@
     });
     if(!r.ok) throw new Error("post "+r.status);
   }
+
 
   const listRooms = () => useApi() ? apiListRooms() : lsListRooms();
   const createRoom = (n) => useApi() ? apiCreateRoom(n) : lsCreateRoom(n);
