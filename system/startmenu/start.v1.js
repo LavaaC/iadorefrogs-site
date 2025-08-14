@@ -33,8 +33,8 @@
         window.WM?.open({
           id: 'auth',
           title: 'Account',
-          icon: '/assets/apps/auth/icon.png',
-          url: `/apps/auth/layout.html#${tab}`,
+          icon: 'assets/apps/auth/icon.png',
+          url: `apps/auth/layout.html#${tab}`,
           w: 420, h: 420, x: 80, y: 80
         });
       };
@@ -47,8 +47,8 @@
       window.WM?.open({
         id: 'customize',
         title: 'Customize',
-        icon: '/assets/apps/customize/icon.png',
-        url: '/apps/customize/layout.html',
+        icon: 'assets/apps/customize/icon.png',
+        url: 'apps/customize/layout.html',
         w: 520, h: 420, x: 120, y: 110
       });
     });
@@ -56,8 +56,8 @@
       window.WM?.open({
         id: 'bug',
         title: 'Bug Report',
-        icon: '/assets/apps/bug/icon.png',
-        url: '/apps/bug/layout.html',
+        icon: 'assets/apps/bug/icon.png',
+        url: 'apps/bug/layout.html',
         w: 520, h: 420, x: 140, y: 130
       });
     });

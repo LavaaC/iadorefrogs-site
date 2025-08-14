@@ -47,7 +47,7 @@
     b.className = 'taskbtn';
     const img = document.createElement('img');
     img.className = 'taskicon';
-    img.src = icon || '/assets/favicon.png';
+    img.src = icon || 'assets/favicon.png';
     const span = document.createElement('span');
     span.className = 'tasklabel';
     span.textContent = title || id;
