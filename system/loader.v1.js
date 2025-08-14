@@ -23,7 +23,9 @@
     }
     if(!document.querySelector('.spacer')){ taskbar.appendChild(Object.assign(document.createElement('div'),{className:'spacer'})); }
     if(!document.querySelector('.clock')){ taskbar.appendChild(Object.assign(document.createElement('div'),{className:'clock'})); }
-    ensure('start-menu','start-menu hidden'); ensure('windows','windows-layer');
+    ensure('start-menu','start-menu hidden');
+    ensure('windows','windows-layer');
+    ensure('user-status','status-outside');
     return {desktop,taskbar};
   }
   function startClock(){
@@ -93,8 +95,10 @@
   function updateStatus(me){
     const el=document.getElementById('user-status');
     if(!el) return;
-    if(me && me.username){
-      el.textContent=`${me.username}${me.tier?` (${me.tier})`:''}`;
+    if(me && (me.username || me.id)){
+      const id = me.id ?? me.username;
+      const status = me.status ?? me.tier;
+      el.textContent = status ? `${id} (${status})` : `${id}`;
     }else{
       el.textContent='Guest';
     }
