@@ -42,7 +42,7 @@
   if (window.WM?.open) {
     window.WM.open({
       id: app.id, title, icon, url,
-      w: app.w || 640, h: app.h || 480,
+      w: app.w || 640, h: app.h || 420,
       x: app.x || 120, y: app.y || 90
     });
     return;

@@ -29,15 +29,18 @@
         window.location.reload();
       });
     } else {
-      mkItem(menu, 'Login / Create account', () => {
-        window.WM?.open({
+      const openAuth = (hash) => {
+        const inst = window.WM?.open({
           id: 'auth',
           title: 'Account',
           icon: 'assets/apps/auth/icon.png',
-          url: 'apps/auth/layout.html',
-          w: 420, h: 360, x: 80, y: 80
+          url: `apps/auth/layout.html${hash}`,
+          w: 420, h: 420, x: 80, y: 80
         });
-      });
+        if (inst?.iframe) inst.iframe.src = `apps/auth/layout.html${hash}`;
+      };
+      mkItem(menu, 'Login', () => openAuth('#login'));
+      mkItem(menu, 'Create account', () => openAuth('#create'));
     }
 
     // Always visible utilities (open if present)
