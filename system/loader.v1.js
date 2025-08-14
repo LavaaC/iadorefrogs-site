@@ -13,20 +13,17 @@
   window.getJSON=(u,o)=>_fetchJSON(u,o); window.postJSON=(u,d)=>_sendJSON(u,'POST',d); window.putJSON=(u,d)=>_sendJSON(u,'PUT',d);
 
   const guest={username:null,name:'Guest',tier:'guest'};
-  const SETTINGS_KEY='desktop_settings';
-  let tempSettings={};
-  function loadSettings(){
-    if(window.currentUser?.username){
-      try{ return JSON.parse(localStorage.getItem(SETTINGS_KEY))||{}; }catch{ return {}; }
-    }
-    return tempSettings;
+  let API='/api';
+  let settingsCache=null;
+  async function loadSettings(){
+    if(settingsCache) return settingsCache;
+    try{ settingsCache=await getJSON(`${API}/settings`); }
+    catch{ settingsCache={}; }
+    return settingsCache;
   }
-  function saveSettings(s){
-    if(window.currentUser?.username){
-      try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }catch{}
-    }else{
-      tempSettings=s;
-    }
+  async function saveSettings(s){
+    settingsCache=s;
+    try{ await putJSON(`${API}/settings`, s); }catch{}
   }
 
   function ensure(id,cls){let e=document.getElementById(id); if(!e){ e=document.createElement('div'); e.id=id; if(cls)e.className=cls; document.body.appendChild(e);} return e;}
@@ -126,14 +123,14 @@
       iconEl.style.left=(ox+dx)+'px';
       iconEl.style.top =(oy+dy)+'px';
     });
-    window.addEventListener('mouseup',()=>{
+    window.addEventListener('mouseup',async ()=>{
       if(!drag) return;
       drag=false; document.body.style.userSelect='';
-      const s=loadSettings();
+      const s=await loadSettings();
       s[app.id]=s[app.id]||{};
       s[app.id].x=parseInt(iconEl.style.left)||0;
       s[app.id].y=parseInt(iconEl.style.top)||0;
-      saveSettings(s);
+      await saveSettings(s);
     });
 
     (document.getElementById('icons') || desktop).appendChild(iconEl);
@@ -143,7 +140,7 @@
   async function buildDesktop(desktop, me){
     const quick=document.getElementById('quick-launch');
     if(quick) quick.innerHTML='';
-    const settings=loadSettings();
+    const settings=await loadSettings();
     let ids=[]; try{ ids=await getJSON('apps/apps.json'); }catch(e){ console.warn('apps.json failed',e); }
     if(!Array.isArray(ids)) ids=[];
 
@@ -178,7 +175,7 @@
       addQuickIcon(quick,{ id:p.id, title:p.meta.title||p.id, icon:iconPath(p.id,p.meta.icon), w:p.meta.w, h:p.meta.h });
     }
 
-    saveSettings(settings);
+    await saveSettings(settings);
   }
 
   window.refreshDesktop=async function(){
@@ -190,7 +187,7 @@
   window.applyDesktopSettings=async function(){
     const {desktop}=ensureChrome();
     const quick=document.getElementById('quick-launch');
-    const settings=loadSettings();
+    const settings=await loadSettings();
     let ids=[]; try{ ids=await getJSON('apps/apps.json'); }catch{}
     if(!Array.isArray(ids)) ids=[];
     for(const id of ids){
@@ -226,7 +223,7 @@
     const {desktop}=ensureChrome();
     let site={apiBase:'/api',devMode:false,wallpaper:'assets/wallpapers/frogs.jpg'};
     try{ site={...site,...(await getJSON('config/site.json'))}; }catch{}
-    const API=site.apiBase||'/api'; window.API=API; window.API_BASE=API; window.siteConfig=site;
+    API=site.apiBase||'/api'; window.API=API; window.API_BASE=API; window.siteConfig=site;
     try{
       const wp=site.wallpaper||'assets/wallpapers/frogs.jpg';
       Object.assign(document.body.style,{backgroundImage:`url('${wp}')`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'});
@@ -241,5 +238,5 @@
   };
 
   document.addEventListener('DOMContentLoaded', ()=> boot().catch(e=>console.error('loadSite fatal',e)) );
-  window.addEventListener('auth:me', e=>updateStatus(e.detail||guest));
+  window.addEventListener('auth:me', e=>{ updateStatus(e.detail||guest); refreshDesktop(); });
 })();
