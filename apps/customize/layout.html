@@ -5,35 +5,72 @@
   <title>Customize</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body{margin:0;padding:10px;font:13px Tahoma,"MS Sans Serif",Arial,sans-serif;background:#fff;color:#000}
-    .row{margin-bottom:8px}
+
+    html,body{height:100%}
+    body{margin:0;padding:10px;font:13px Tahoma,"MS Sans Serif",Arial,sans-serif;background:#fff;color:#000;display:flex;flex-direction:column}
+    #apps{flex:1;overflow:auto}
+    .row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
     label{margin-right:10px}
+    button{background:#c0c0c0;border:2px outset #fff;padding:2px 6px;cursor:pointer}
+    button:active{border:2px inset #fff}
+    .buttons{display:flex;gap:8px;margin-top:8px}
+
   </style>
 </head>
 <body>
   <div id="apps"></div>
+
+  <div class="buttons">
+    <button id="save">Save</button>
+    <button id="cancel">Cancel</button>
+  </div>
   <script>
     const KEY='desktop_settings';
-    function load(){ try{return JSON.parse(window.top.localStorage.getItem(KEY))||{};}catch{return{};} }
-    function save(s){ try{window.top.localStorage.setItem(KEY, JSON.stringify(s));}catch{} }
+    function load(){try{return JSON.parse(window.top.localStorage.getItem(KEY))||{};}catch{return{};}}
+    function save(s){try{window.top.localStorage.setItem(KEY, JSON.stringify(s));}catch{}}
+
     async function init(){
       const listEl=document.getElementById('apps');
       const ids=await (await fetch('../apps.json')).json();
       const settings=load();
-      ids.forEach(id=>{
+
+      const order=(settings.pinnedOrder&&settings.pinnedOrder.filter(id=>ids.includes(id)))||ids.slice();
+      ids.forEach(id=>{if(!order.includes(id)) order.push(id);});
+      order.forEach(id=>{
         const s=settings[id]||{};
         const row=document.createElement('div');
         row.className='row';
-        row.innerHTML=`<label><input type="checkbox" class="show" data-id="${id}" ${s.show!==false?'checked':''}> Show</label>`+
-          `<label><input type="checkbox" class="pin" data-id="${id}" ${s.pinned?'checked':''}> Pin</label> ${id}`;
+        row.dataset.id=id;
+        row.innerHTML=`<button class="up">\u25B2</button><button class="down">\u25BC</button>`+
+          `<label><input type="checkbox" class="show" ${s.show!==false?'checked':''}> Show</label>`+
+          `<label><input type="checkbox" class="pin" ${s.pinned?'checked':''}> Pin</label> ${id}`;
         listEl.appendChild(row);
       });
-      listEl.querySelectorAll('.show').forEach(cb=>{
-        cb.onchange=()=>{const id=cb.dataset.id;const s=load();s[id]=s[id]||{};s[id].show=cb.checked;save(s);window.top.location.reload();};
+      listEl.addEventListener('click',e=>{
+        const row=e.target.closest('.row');
+        if(!row) return;
+        if(e.target.classList.contains('up')){
+          const prev=row.previousElementSibling; if(prev) listEl.insertBefore(row,prev);
+        }
+        if(e.target.classList.contains('down')){
+          const next=row.nextElementSibling; if(next) listEl.insertBefore(next,row);
+        }
       });
-      listEl.querySelectorAll('.pin').forEach(cb=>{
-        cb.onchange=()=>{const id=cb.dataset.id;const s=load();s[id]=s[id]||{};s[id].pinned=cb.checked;save(s);window.top.location.reload();};
-      });
+      document.getElementById('save').onclick=()=>{
+        const s=load();
+        Array.from(listEl.children).forEach(row=>{
+          const id=row.dataset.id;
+          s[id]=s[id]||{};
+          s[id].show=row.querySelector('.show').checked;
+          s[id].pinned=row.querySelector('.pin').checked;
+        });
+        s.pinnedOrder=Array.from(listEl.children).map(r=>r.dataset.id);
+        save(s);
+        window.top.refreshDesktop?.();
+        window.top.WM?.close('customize');
+      };
+      document.getElementById('cancel').onclick=()=>{window.top.WM?.close('customize');};
+
     }
     init();
   </script>

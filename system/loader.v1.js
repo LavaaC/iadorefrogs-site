@@ -134,6 +134,9 @@
     const settings=loadSettings();
     let ids=[]; try{ ids=await getJSON('apps/apps.json'); }catch(e){ console.warn('apps.json failed',e); }
     if(!Array.isArray(ids)) ids=[];
+
+    const pinned=[];
+
     let idx=0;
     for(const id of ids){
       try{
@@ -143,7 +146,9 @@
         const posX = s.x ?? meta.x ?? (20 + (idx%5)*110);
         const posY = s.y ?? meta.y ?? (20 + Math.floor(idx/5)*110);
         addIcon(desktop,{ id, title:meta.title||id, icon:iconPath(id,meta.icon), x:posX, y:posY, w:meta.w, h:meta.h });
-        if(s.pinned) addQuickIcon(quick,{ id, title:meta.title||id, icon:iconPath(id,meta.icon), w:meta.w, h:meta.h });
+
+        if(s.pinned) pinned.push({id,meta});
+
         if(!settings[id]) settings[id]={};
         if(settings[id].show===undefined) settings[id].show=true;
         if(settings[id].x===undefined) settings[id].x=posX;
@@ -151,8 +156,24 @@
         idx++;
       }catch(e){ console.warn(`app ${id} meta failed`,e); }
     }
+
+    const order=settings.pinnedOrder||[];
+    pinned.sort((a,b)=>{
+      const ai=order.indexOf(a.id); const bi=order.indexOf(b.id);
+      return (ai<0?Infinity:ai)-(bi<0?Infinity:bi);
+    });
+    for(const p of pinned){
+      addQuickIcon(quick,{ id:p.id, title:p.meta.title||p.id, icon:iconPath(p.id,p.meta.icon), w:p.meta.w, h:p.meta.h });
+    }
+
     saveSettings(settings);
   }
+
+  window.refreshDesktop=async function(){
+    const {desktop}=ensureChrome();
+    if(desktop) desktop.innerHTML='<div id="icons"></div>';
+    await buildDesktop(desktop, window.currentUser||guest);
+  };
 
   function updateStatus(me){
     const el=document.getElementById('user-status');
