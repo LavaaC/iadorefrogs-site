@@ -2,6 +2,6 @@
   "title": "Account",
   "icon": "/assets/apps/auth/icon.png",
   "access": "guest",
-  "w": 420,
-  "h": 420
+  "w": 480,
+  "h": 480
 }
