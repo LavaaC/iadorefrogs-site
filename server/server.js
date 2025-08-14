@@ -211,6 +211,7 @@ app.get('/api/chat/rooms/:room', async (req, res) => {
   const fp = path.join(CHAT_DIR, `${room}.txt`);
   const msgs = await readJson(fp, []);
   const limit = Math.max(0, Math.min(500, Number(req.query.limit || 200)));
+  res.set('Cache-Control', 'no-store');
   res.json(msgs.slice(-limit));
 });
 
