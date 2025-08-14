@@ -8,29 +8,33 @@
 
     html,body{height:100%;overflow:hidden}
     body{margin:0;padding:10px;font:13px Tahoma,"MS Sans Serif",Arial,sans-serif;background:#fff;color:#000;display:flex;flex-direction:column}
-    #apps{flex:1;overflow:auto;margin-bottom:8px}
+    #apps{flex:1;overflow:auto}
     .row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+    .row img{width:16px;height:16px}
     .name{min-width:80px}
     label{margin-right:10px}
     button{background:#c0c0c0;border:2px outset #fff;padding:2px 6px;cursor:pointer}
     button:active{border:2px inset #fff}
-    .buttons{display:flex;gap:8px;margin-top:8px}
+    .buttons{display:flex;gap:8px;margin-top:8px;flex-shrink:0}
 
   </style>
 </head>
 <body>
-  <div id="apps"></div>
+  <div id="apps">Loading...</div>
 
-  <div class="buttons">
-    <button id="save">Save</button>
-    <button id="cancel">Cancel</button>
-  </div>
+    <div class="buttons">
+      <button id="save">Save</button>
+    </div>
   <script>
     async function load(){
-      try{return await window.top.getJSON('/api/settings');}catch{return{};}
+      try{
+        return (await window.top.loadSettings?.()) || {};
+      }catch{
+        return {};
+      }
     }
     async function save(s){
-      try{await window.top.putJSON('/api/settings', s);}catch{}
+      try{await window.top.saveSettings?.(s);}catch{}
     }
 
     async function init(){
@@ -39,17 +43,27 @@
         return;
       }
       const listEl=document.getElementById('apps');
-      const ids=await (await fetch('../apps.json')).json();
+      let ids=[];
+      try{ ids=await (await fetch('../apps.json')).json(); }
+      catch{ listEl.textContent='Failed to load apps.'; return; }
       const settings=await load();
+
+      const metas={};
+      await Promise.all(ids.map(async id=>{ try{ metas[id]=await (await fetch(`../${id}/app.json`)).json(); }catch{} }));
 
       const order=(settings.pinnedOrder&&settings.pinnedOrder.filter(id=>ids.includes(id)))||ids.slice();
       ids.forEach(id=>{if(!order.includes(id)) order.push(id);});
+      listEl.textContent='';
       order.forEach(id=>{
         const s=settings[id]||{};
+        const meta=metas[id]||{};
+        const title=meta.title||id;
+        const icon=meta.icon?(meta.icon.startsWith('/')||meta.icon.startsWith('http')?meta.icon:`../${id}/${meta.icon}`):`../assets/apps/${id}/icon.png`;
         const row=document.createElement('div');
         row.className='row';
         row.dataset.id=id;
-        row.innerHTML=`<span class="name">${id}</span>`+
+        row.innerHTML=`<img src="${icon}" alt="">`+
+          `<span class="name">${title}</span>`+
           `<button class="up">\u25B2</button><button class="down">\u25BC</button>`+
           `<label><input type="checkbox" class="show" ${s.show!==false?'checked':''}> Show</label>`+
           `<label><input type="checkbox" class="pin" ${s.pinned?'checked':''}> Pin</label>`;
@@ -75,13 +89,18 @@
         });
         s.pinnedOrder=Array.from(listEl.children).map(r=>r.dataset.id);
         await save(s);
-        await window.top.applyDesktopSettings?.();
+        await window.top.refreshDesktop?.();
         window.top.WM?.close('customize');
       };
-      document.getElementById('cancel').onclick=()=>{window.top.WM?.close('customize');};
 
+      if(!listEl.children.length){
+        listEl.textContent='No apps available.';
+      }
     }
-    init();
+    init().catch(()=>{
+      const listEl=document.getElementById('apps');
+      listEl.textContent='Failed to load customization.';
+    });
   </script>
 </body>
 </html>

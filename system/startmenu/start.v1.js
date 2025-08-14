@@ -52,7 +52,7 @@
           title: 'Customize',
           icon: 'assets/apps/profile/icon.png',
           url: 'apps/customize/layout.html',
-          w: 520, h: 520, x: 120, y: 110
+          w: 520, h: 560, x: 120, y: 110
         });
       });
     }
