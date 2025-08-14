@@ -86,7 +86,7 @@
     });
   }
 
-  function createWindow({ id, title, icon, url, w=640, h=480, x=120, y=90 }) {
+  function createWindow({ id, title, icon, url, w=640, h=420, x=120, y=90 }) {
     const win = document.createElement('div');
     win.className = 'window active-window';
     win.style.position = 'absolute';

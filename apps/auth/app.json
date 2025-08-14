@@ -3,5 +3,5 @@
   "icon": "/assets/apps/auth/icon.png",
   "access": "guest",
   "w": 420,
-  "h": 360
+  "h": 420
 }
