@@ -116,16 +116,16 @@ app.post('/api/register', async (req, res) => {
         newUser.password = password;
     }
     users.push(newUser);
-    await writeJson(USERS_JSON, users);
-    // Append basic details to an external log
     try {
+        await writeJson(USERS_JSON, users);
         await fs.appendFile(NEW_USERS_LOG, JSON.stringify({
             username: newUser.username,
             tier: newUser.tier,
             createdAt: new Date().toISOString()
         }) + '\n');
     } catch (e) {
-        console.error('Failed to log new user', e);
+        console.error('Failed to persist new user', e);
+        return res.status(500).json({ error: 'storage-failure' });
     }
     // Log the new user in by initializing session
     req.session.user = { username: newUser.username, name: newUser.name, tier: newUser.tier };
@@ -149,7 +149,12 @@ app.put('/api/settings', async (req, res) => {
   if (!isLogged(req)) return res.status(401).json({ error: 'login-required' });
   const fp = path.join(USER_SETTINGS_DIR, `${req.session.user.username}.json`);
   const next = req.body && typeof req.body === 'object' ? req.body : {};
-  await writeJson(fp, next);
+  try {
+    await writeJson(fp, next);
+  } catch (e) {
+    console.error('Failed to write user settings', e);
+    return res.status(500).json({ error: 'storage-failure' });
+  }
   res.json({ ok: true });
 });
 
@@ -163,7 +168,12 @@ app.get('/api/admin/settings', async (req, res) => {
 app.put('/api/admin/settings', async (req, res) => {
   if (!isDev(req)) return res.status(403).json({ error: 'forbidden' });
   const next = req.body && typeof req.body === 'object' ? req.body : {};
-  await writeJson(ADMIN_JSON, next);
+  try {
+    await writeJson(ADMIN_JSON, next);
+  } catch (e) {
+    console.error('Failed to write admin settings', e);
+    return res.status(500).json({ error: 'storage-failure' });
+  }
   res.json({ ok: true });
 });
 
@@ -187,7 +197,12 @@ app.put('/api/admin/users', async (req, res) => {
     const i = users.findIndex(u => u.username === username);
     if (i >= 0) users[i].tier = tier;
   }
-  await writeJson(USERS_JSON, users);
+  try {
+    await writeJson(USERS_JSON, users);
+  } catch (e) {
+    console.error('Failed to update user tiers', e);
+    return res.status(500).json({ error: 'storage-failure' });
+  }
   res.json({ ok: true });
 });
 
@@ -202,7 +217,12 @@ app.post('/api/chat/rooms', async (req, res) => {
   if (!isDev(req)) return res.status(403).json({ error: 'forbidden' });
   const room = sanitizeRoom(req.body?.room);
   const fp = path.join(CHAT_DIR, `${room}.txt`);
-  if (!fssync.existsSync(fp)) await writeJson(fp, []);
+  try {
+    if (!fssync.existsSync(fp)) await writeJson(fp, []);
+  } catch (e) {
+    console.error('Failed to create chat room', e);
+    return res.status(500).json({ error: 'storage-failure' });
+  }
   res.json({ ok: true, room });
 });
 
@@ -223,7 +243,12 @@ app.post('/api/chat/rooms/:room', async (req, res) => {
   const fp = path.join(CHAT_DIR, `${room}.txt`);
   const msgs = await readJson(fp, []);
   msgs.push({ ts: Date.now(), user: req.session.user.username, text });
-  await writeJson(fp, msgs);
+  try {
+    await writeJson(fp, msgs);
+  } catch (e) {
+    console.error('Failed to write chat message', e);
+    return res.status(500).json({ error: 'storage-failure' });
+  }
   res.json({ ok: true });
 });
 
