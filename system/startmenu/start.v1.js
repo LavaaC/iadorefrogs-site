@@ -29,12 +29,13 @@
       });
     } else {
       const openAuth = (hash) => {
+        const h = window.innerHeight ? Math.max(300, window.innerHeight - 40) : 520;
         const inst = window.WM?.open({
           id: 'auth',
           title: 'Account',
           icon: 'assets/apps/auth/icon.png',
           url: `apps/auth/layout.html${hash}`,
-          w: 480, h: 520, x: 80, y: 80
+          w: 480, h, x: 80, y: 0
         });
         if (inst?.iframe) inst.iframe.src = `apps/auth/layout.html${hash}`;
       };
