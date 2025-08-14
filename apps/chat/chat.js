@@ -68,7 +68,9 @@
     return data?.room || sanitizeRoom(name);
   }
   async function apiGetMsgs(room){
+
     const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}?t=${Date.now()}`, {cache:"no-store", credentials:"include"});
+
     if (!r.ok) throw new Error("msgs "+r.status);
     const data = await r.json();
     return Array.isArray(data) ? data : (data.messages || data.msgs || []);
@@ -150,7 +152,9 @@
     async function drawMessages(){
       const raw = await getMsgs(current);
       const msgs = Array.isArray(raw) ? raw : (raw?.messages || raw?.msgs || []);
+
       logEl.innerHTML = msgs.map(renderMsg).join("");
+
       logEl.scrollTop = logEl.scrollHeight;
     }
 
