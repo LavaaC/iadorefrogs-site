@@ -1,0 +1,12 @@
+# Node dependencies
+server/node_modules/
+
+# User data directories
+system/data/*
+!system/data/.gitkeep
+!system/data/user-settings/
+system/data/user-settings/*
+!system/data/user-settings/.gitkeep
+
+system/chat/rooms/*
+!system/chat/rooms/.gitkeep
