@@ -39,7 +39,7 @@
         });
       };
       mkItem(menu, 'Login', () => openAuth('login'));
-      mkItem(menu, 'Create account', () => openAuth('create'));
+      mkItem(menu, 'Create Account', () => openAuth('create'));
     }
 
     // Always visible utilities (open if present)
