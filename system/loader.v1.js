@@ -33,7 +33,6 @@
     if(!document.querySelector('.clock')){ taskbar.appendChild(Object.assign(document.createElement('div'),{className:'clock'})); }
     ensure('start-menu','start-menu hidden');
     ensure('windows','windows-layer');
-    ensure('user-status','status-outside');
     return {desktop,taskbar};
   }
   function startClock(){
@@ -66,6 +65,7 @@
     if(!quick) return;
     const btn=document.createElement('button');
     btn.className='ql';
+    btn.dataset.id=app.id;
     const img=document.createElement('img');
     img.className='ql-img';
     img.src=app.icon || `assets/apps/${app.id}/icon.png`;
@@ -175,20 +175,39 @@
     await buildDesktop(desktop, window.currentUser||guest);
   };
 
-  function updateStatus(me){
-    const el=document.getElementById('user-status');
-    const q=document.getElementById('quick-note-user');
-    if(!el) return;
-    const cap = s => s ? s.charAt(0).toUpperCase()+s.slice(1) : s;
-    if(me && (me.username || me.id)){
-      const id = me.id ?? me.username;
-      const status = cap(me.status ?? me.tier);
-      el.textContent = status ? `${id} (${status})` : `${id}`;
-      if(q) q.textContent=id;
-    }else{
-      el.textContent='Guest';
-      if(q) q.textContent='Guest';
+  window.applyDesktopSettings=async function(){
+    const {desktop}=ensureChrome();
+    const quick=document.getElementById('quick-launch');
+    const settings=loadSettings();
+    let ids=[]; try{ ids=await getJSON('apps/apps.json'); }catch{}
+    if(!Array.isArray(ids)) ids=[];
+    for(const id of ids){
+      let meta=null;
+      try{ meta=await getJSON(`apps/${id}/app.json`); }catch{}
+      const s=settings[id]||{};
+      const iconEl=desktop.querySelector(`.icon[data-id="${id}"]`);
+      if(s.show===false){ if(iconEl) iconEl.remove(); }
+      else if(iconEl){
+        if(s.x!=null) iconEl.style.left=s.x+'px';
+        if(s.y!=null) iconEl.style.top=s.y+'px';
+      }else if(meta){
+        addIcon(desktop,{ id, title:meta.title||id, icon:iconPath(id,meta.icon), x:s.x??meta.x, y:s.y??meta.y, w:meta.w, h:meta.h });
+      }
+      const ql=quick?.querySelector(`button[data-id="${id}"]`);
+      if(s.pinned){
+        if(!ql && meta) addQuickIcon(quick,{ id, title:meta.title||id, icon:iconPath(id,meta.icon), w:meta.w, h:meta.h });
+      }else if(ql){ ql.remove(); }
     }
+    const order=settings.pinnedOrder||[];
+    if(quick){
+      Array.from(quick.children)
+        .sort((a,b)=>order.indexOf(a.dataset.id)-order.indexOf(b.dataset.id))
+        .forEach(el=>quick.appendChild(el));
+    }
+  };
+
+  function updateStatus(me){
+    // status display removed
   }
 
   const boot=async()=>{
