@@ -14,8 +14,20 @@
 
   const guest={username:null,name:'Guest',tier:'guest'};
   const SETTINGS_KEY='desktop_settings';
-  function loadSettings(){ try{ return JSON.parse(localStorage.getItem(SETTINGS_KEY))||{}; }catch{ return {}; } }
-  function saveSettings(s){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }catch{} }
+  let tempSettings={};
+  function loadSettings(){
+    if(window.currentUser?.username){
+      try{ return JSON.parse(localStorage.getItem(SETTINGS_KEY))||{}; }catch{ return {}; }
+    }
+    return tempSettings;
+  }
+  function saveSettings(s){
+    if(window.currentUser?.username){
+      try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }catch{}
+    }else{
+      tempSettings=s;
+    }
+  }
 
   function ensure(id,cls){let e=document.getElementById(id); if(!e){ e=document.createElement('div'); e.id=id; if(cls)e.className=cls; document.body.appendChild(e);} return e;}
   function ensureChrome(){
