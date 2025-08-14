@@ -87,8 +87,8 @@
       const st = document.getElementById('li-status'); st.textContent='';
       if(!u||!p){ st.textContent='Enter username and password.'; return; }
       try{
-        await fetchJSON('/api/login',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
-        window.top.location.reload();
+        await window.top.auth.login(u,p);
+        refreshMe();
       }catch(e){ st.textContent='Login failed.'; }
     };
 
@@ -99,7 +99,8 @@
       if(!u||!p){ st.textContent='Enter username and password.'; return; }
       try{
         await fetchJSON('/api/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
-        window.top.location.reload();
+        await window.top.auth.login(u,p);
+        refreshMe();
       }catch(e){ st.textContent='Account creation failed.'; }
     };
 
@@ -109,8 +110,8 @@
     document.getElementById('btn-logout').onclick = async ()=>{
       const st = document.getElementById('lo-status'); st.textContent='';
       try{
-        await fetchJSON('/api/logout',{ method:'POST' });
-        window.top.location.reload();
+        await window.top.auth.logout();
+        refreshMe();
       }catch(e){ st.textContent='Logout failed.'; }
     };
 
