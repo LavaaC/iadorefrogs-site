@@ -10,6 +10,7 @@
     body{margin:0;padding:10px;font:13px Tahoma,"MS Sans Serif",Arial,sans-serif;background:#fff;color:#000;display:flex;flex-direction:column}
     #apps{flex:1;overflow:auto;margin-bottom:8px}
     .row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+    .name{min-width:80px}
     label{margin-right:10px}
     button{background:#c0c0c0;border:2px outset #fff;padding:2px 6px;cursor:pointer}
     button:active{border:2px inset #fff}
@@ -26,8 +27,19 @@
   </div>
   <script>
     const KEY='desktop_settings';
-    function load(){try{return JSON.parse(window.top.localStorage.getItem(KEY))||{};}catch{return{};}}
-    function save(s){try{window.top.localStorage.setItem(KEY, JSON.stringify(s));}catch{}}
+    function load(){
+      if(window.top.currentUser?.username){
+        try{return JSON.parse(window.top.localStorage.getItem(KEY))||{};}catch{return{};}
+      }
+      return window.top._tempSettings||{};
+    }
+    function save(s){
+      if(window.top.currentUser?.username){
+        try{window.top.localStorage.setItem(KEY, JSON.stringify(s));}catch{}
+      }else{
+        window.top._tempSettings=s;
+      }
+    }
 
     async function init(){
       const listEl=document.getElementById('apps');
@@ -41,9 +53,10 @@
         const row=document.createElement('div');
         row.className='row';
         row.dataset.id=id;
-        row.innerHTML=`<button class="up">\u25B2</button><button class="down">\u25BC</button>`+
+        row.innerHTML=`<span class="name">${id}</span>`+
+          `<button class="up">\u25B2</button><button class="down">\u25BC</button>`+
           `<label><input type="checkbox" class="show" ${s.show!==false?'checked':''}> Show</label>`+
-          `<label><input type="checkbox" class="pin" ${s.pinned?'checked':''}> Pin</label> ${id}`;
+          `<label><input type="checkbox" class="pin" ${s.pinned?'checked':''}> Pin</label>`;
         listEl.appendChild(row);
       });
       listEl.addEventListener('click',e=>{
