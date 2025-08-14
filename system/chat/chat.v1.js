@@ -64,7 +64,7 @@
     return data?.room || sanitizeRoom(name);
   }
   async function apiGetMsgs(room){
-    const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {cache:"no-cache", credentials:"include"});
+    const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}?t=${Date.now()}`, {cache:"no-store", credentials:"include"});
     if(!r.ok) throw new Error("msgs "+r.status);
     return r.json();
   }
