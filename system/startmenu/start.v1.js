@@ -44,16 +44,18 @@
       mkItem(menu, 'Create account', () => openAuth('#create'));
     }
 
-    // Always visible utilities (open if present)
-    mkItem(menu, 'Customize', () => {
-      window.WM?.open({
-        id: 'customize',
-        title: 'Customize',
-        icon: 'assets/apps/profile/icon.png',
-        url: 'apps/customize/layout.html',
-        w: 520, h: 520, x: 120, y: 110
+    // Utilities only for logged-in users
+    if (me.username) {
+      mkItem(menu, 'Customize', () => {
+        window.WM?.open({
+          id: 'customize',
+          title: 'Customize',
+          icon: 'assets/apps/profile/icon.png',
+          url: 'apps/customize/layout.html',
+          w: 520, h: 520, x: 120, y: 110
+        });
       });
-    });
+    }
     mkItem(menu, 'Bug Report', () => {
       window.WM?.open({
         id: 'bug',

@@ -17,6 +17,7 @@ const CHAT_DIR = path.join(SITE_ROOT, 'system', 'chat', 'rooms');
 const USERS_JSON = path.join(DATA_DIR, 'users.json');
 const ADMIN_JSON = path.join(DATA_DIR, 'admin.json');
 const NEW_USERS_LOG = path.join(DATA_DIR, 'new-users.log');
+const USER_SETTINGS_DIR = path.join(DATA_DIR, 'user-settings');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -49,6 +50,7 @@ const isLogged = (req) => !!req.session?.user;
 (async () => {
   await ensureDir(DATA_DIR);
   await ensureDir(CHAT_DIR);
+  await ensureDir(USER_SETTINGS_DIR);
   if (!fssync.existsSync(USERS_JSON)) {
     await writeJson(USERS_JSON, [
       { username: 'Agu', password: 'CHANGE_ME', name: 'Agu', tier: 'devmode' }
@@ -133,6 +135,22 @@ app.post('/api/register', async (req, res) => {
 app.get('/api/me', (req, res) => {
   if (!req.session.user) return res.json({ username: null, name: 'Guest', tier: 'guest' });
   res.json(req.session.user);
+});
+
+// ---------- user settings ----------
+app.get('/api/settings', async (req, res) => {
+  if (!isLogged(req)) return res.json({});
+  const fp = path.join(USER_SETTINGS_DIR, `${req.session.user.username}.json`);
+  const s = await readJson(fp, {});
+  res.json(s);
+});
+
+app.put('/api/settings', async (req, res) => {
+  if (!isLogged(req)) return res.status(401).json({ error: 'login-required' });
+  const fp = path.join(USER_SETTINGS_DIR, `${req.session.user.username}.json`);
+  const next = req.body && typeof req.body === 'object' ? req.body : {};
+  await writeJson(fp, next);
+  res.json({ ok: true });
 });
 
 // ---------- admin: settings ----------
