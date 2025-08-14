@@ -39,7 +39,7 @@ const writeJson = async (p, obj) => {
   await fs.writeFile(tmp, JSON.stringify(obj, null, 2));
   await fs.rename(tmp, p);
 };
-const sanitizeRoom = (name) => (name || '').toString().toLowerCase().replace(/[^a-z0-9-_]/g, '').slice(0, 64) || 'public';
+const sanitizeRoom = require('./utils/sanitizeRoom');
 const isDev = (req) => req.session?.user?.tier === 'devmode';
 const isLogged = (req) => !!req.session?.user;
 
