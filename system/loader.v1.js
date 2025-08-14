@@ -35,6 +35,9 @@
     try{ await putJSON(`${API}/settings`, s); }catch{}
   }
 
+  window.loadSettings = loadSettings;
+  window.saveSettings = saveSettings;
+
   function ensure(id,cls){let e=document.getElementById(id); if(!e){ e=document.createElement('div'); e.id=id; if(cls)e.className=cls; document.body.appendChild(e);} return e;}
   function ensureChrome(){
     const desktop=ensure('desktop','desktop');
@@ -229,7 +232,7 @@
   }
 
   const boot=async()=>{
-    const {desktop}=ensureChrome();
+    ensureChrome();
     let site={apiBase:'/api',devMode:false,wallpaper:'assets/wallpapers/frogs.jpg'};
     try{ site={...site,...(await getJSON('config/site.json'))}; }catch{}
     API=site.apiBase||'/api'; window.API=API; window.API_BASE=API; window.siteConfig=site;
@@ -239,9 +242,7 @@
     }catch{}
     let me=guest; window.currentUser=me;
     try{ me=await getJSON(`${API}/me`); window.currentUser=me; }catch{}
-    updateStatus(me);
     if(me.tier==='devmode'){ getJSON(`${API}/admin/settings`).then(s=>window.siteAdmin=s).catch(()=>{}); }
-    await buildDesktop(desktop, me);
     startClock();
     try{ window.dispatchEvent(new CustomEvent('auth:me',{detail:me})); }catch{}
   };
