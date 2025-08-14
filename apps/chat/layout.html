@@ -1,6 +1,6 @@
 <style>
-.chat-wrap{display:grid;grid-template-columns:200px 1fr;gap:8px;min-height:280px}
-.chat-sidebar{background:#f2f2f2;border:2px inset #808080;padding:6px}
+.chat-wrap{display:flex;gap:8px;min-height:280px}
+.chat-sidebar{background:#f2f2f2;border:2px inset #808080;padding:6px;width:200px;flex-shrink:0}
 .rooms-title{font-weight:700;margin-bottom:6px}
 #chat-rooms{display:flex;flex-direction:column;gap:4px}
 .room-btn{padding:4px 6px;border:1px solid #000;background:#c0c0c0;cursor:pointer;text-align:left}
@@ -15,7 +15,8 @@
 .msg{margin:4px 0}
 .msg .ts{font-size:11px;color:#666;margin-left:6px}
 .chat-input{display:flex;gap:6px}
-.chat-input input{flex:1}
+.chat-input input{flex:1;height:24px;padding:2px 4px}
+#chat-send{height:24px;padding:2px 6px}
 </style>
 
 <div class="chat-wrap">
