@@ -53,26 +53,35 @@
     // Same-origin with parent, so we can call /api directly and reload top on success
     async function fetchJSON(u, opt){ const r = await fetch(u, { credentials:'include', ...opt }); if(!r.ok) throw new Error((await r.text())||r.status); return r.json(); }
 
+    function showLogin(){
+      document.getElementById('login-pane').style.display='';
+      document.getElementById('create-pane').style.display='none';
+      location.hash = '#login';
+    }
+    function showCreate(){
+      document.getElementById('login-pane').style.display='none';
+      document.getElementById('create-pane').style.display='';
+      location.hash = '#create';
+    }
+
     async function refreshMe(){
       try{
         const me = await fetchJSON('/api/me');
         const si = document.getElementById('signed-in');
-        const li = document.getElementById('login-pane');
-        const cr = document.getElementById('create-pane');
         if (me && me.username){
-          li.style.display='none';
-          cr.style.display='none';
+          document.getElementById('login-pane').style.display='none';
+          document.getElementById('create-pane').style.display='none';
           si.style.display='';
           document.getElementById('me-name').textContent = me.username + (me.tier ? ` (${me.tier})` : '');
         }else{
-          li.style.display='';
-          cr.style.display='none';
           si.style.display='none';
+          if (location.hash === '#create') showCreate();
+          else showLogin();
         }
       }catch{
-        document.getElementById('login-pane').style.display='';
-        document.getElementById('create-pane').style.display='none';
         document.getElementById('signed-in').style.display='none';
+        if (location.hash === '#create') showCreate();
+        else showLogin();
       }
     }
 
@@ -98,14 +107,8 @@
       }catch(e){ st.textContent='Account creation failed.'; }
     };
 
-    document.getElementById('show-create').onclick = ()=>{
-      document.getElementById('login-pane').style.display='none';
-      document.getElementById('create-pane').style.display='';
-    };
-    document.getElementById('show-login').onclick = ()=>{
-      document.getElementById('login-pane').style.display='';
-      document.getElementById('create-pane').style.display='none';
-    };
+    document.getElementById('show-create').onclick = showCreate;
+    document.getElementById('show-login').onclick = showLogin;
 
     document.getElementById('btn-logout').onclick = async ()=>{
       const st = document.getElementById('lo-status'); st.textContent='';

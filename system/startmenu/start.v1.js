@@ -29,15 +29,17 @@
         window.location.reload();
       });
     } else {
-      mkItem(menu, 'Login / Create account', () => {
+      const openAuth = (tab) => {
         window.WM?.open({
           id: 'auth',
           title: 'Account',
           icon: '/assets/apps/auth/icon.png',
-          url: '/apps/auth/layout.html',
-          w: 420, h: 360, x: 80, y: 80
+          url: `/apps/auth/layout.html#${tab}`,
+          w: 420, h: 420, x: 80, y: 80
         });
-      });
+      };
+      mkItem(menu, 'Login', () => openAuth('login'));
+      mkItem(menu, 'Create account', () => openAuth('create'));
     }
 
     // Always visible utilities (open if present)
