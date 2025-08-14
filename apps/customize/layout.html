@@ -21,10 +21,9 @@
 <body>
   <div id="apps"></div>
 
-  <div class="buttons">
-    <button id="save">Save</button>
-    <button id="cancel">Cancel</button>
-  </div>
+    <div class="buttons">
+      <button id="save">Save</button>
+    </div>
   <script>
     async function load(){
       try{return await window.top.loadSettings?.();}catch{return{};}
@@ -39,7 +38,9 @@
         return;
       }
       const listEl=document.getElementById('apps');
-      const ids=await (await fetch('../apps.json')).json();
+      let ids=[];
+      try{ ids=await (await fetch('../apps.json')).json(); }
+      catch{ listEl.textContent='Failed to load apps.'; return; }
       const settings=await load();
 
       const order=(settings.pinnedOrder&&settings.pinnedOrder.filter(id=>ids.includes(id)))||ids.slice();
@@ -78,7 +79,6 @@
         await window.top.refreshDesktop?.();
         window.top.WM?.close('customize');
       };
-      document.getElementById('cancel').onclick=()=>{window.top.WM?.close('customize');};
 
     }
     init();
