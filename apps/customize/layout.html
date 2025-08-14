@@ -5,6 +5,7 @@
   <title>Customize</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
+
     html,body{height:100%}
     body{margin:0;padding:10px;font:13px Tahoma,"MS Sans Serif",Arial,sans-serif;background:#fff;color:#000;display:flex;flex-direction:column}
     #apps{flex:1;overflow:auto}
@@ -13,10 +14,12 @@
     button{background:#c0c0c0;border:2px outset #fff;padding:2px 6px;cursor:pointer}
     button:active{border:2px inset #fff}
     .buttons{display:flex;gap:8px;margin-top:8px}
+
   </style>
 </head>
 <body>
   <div id="apps"></div>
+
   <div class="buttons">
     <button id="save">Save</button>
     <button id="cancel">Cancel</button>
@@ -25,10 +28,12 @@
     const KEY='desktop_settings';
     function load(){try{return JSON.parse(window.top.localStorage.getItem(KEY))||{};}catch{return{};}}
     function save(s){try{window.top.localStorage.setItem(KEY, JSON.stringify(s));}catch{}}
+
     async function init(){
       const listEl=document.getElementById('apps');
       const ids=await (await fetch('../apps.json')).json();
       const settings=load();
+
       const order=(settings.pinnedOrder&&settings.pinnedOrder.filter(id=>ids.includes(id)))||ids.slice();
       ids.forEach(id=>{if(!order.includes(id)) order.push(id);});
       order.forEach(id=>{
@@ -65,8 +70,10 @@
         window.top.WM?.close('customize');
       };
       document.getElementById('cancel').onclick=()=>{window.top.WM?.close('customize');};
+
     }
     init();
   </script>
 </body>
 </html>
+
