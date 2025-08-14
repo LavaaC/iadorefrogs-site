@@ -13,8 +13,6 @@
   window.getJSON=(u,o)=>_fetchJSON(u,o); window.postJSON=(u,d)=>_sendJSON(u,'POST',d); window.putJSON=(u,d)=>_sendJSON(u,'PUT',d);
 
   const guest={username:null,name:'Guest',tier:'guest'};
-  const tiers=['guest','unverified','verified','closefriend','devmode'];
-  const needOK=(have,need)=> tiers.indexOf(have)>=tiers.indexOf(need);
 
   function ensure(id,cls){let e=document.getElementById(id); if(!e){ e=document.createElement('div'); e.id=id; if(cls)e.className=cls; document.body.appendChild(e);} return e;}
   function ensureChrome(){
@@ -87,10 +85,18 @@
     for(const id of ids){
       try{
         const meta=await getJSON(`/apps/${id}/app.json`);
-        const need=meta.access||'guest'; const have=me.tier||'guest';
-        if(!needOK(have,need)) continue;
         addIcon(desktop,{ id, title:meta.title||id, icon:iconPath(id,meta.icon), x:meta.x,y:meta.y,w:meta.w,h:meta.h });
       }catch(e){ console.warn(`app ${id} meta failed`,e); }
+    }
+  }
+
+  function updateStatus(me){
+    const el=document.getElementById('user-status');
+    if(!el) return;
+    if(me && me.username){
+      el.textContent=`${me.username}${me.tier?` (${me.tier})`:''}`;
+    }else{
+      el.textContent='Guest';
     }
   }
 
@@ -104,6 +110,7 @@
       Object.assign(document.body.style,{backgroundImage:`url('${wp}')`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'});
     }catch{}
     let me=guest; try{ me=await getJSON(`${API}/me`);}catch{} window.currentUser=me;
+    updateStatus(me);
     if(me.tier==='devmode'){ getJSON(`${API}/admin/settings`).then(s=>window.siteAdmin=s).catch(()=>{}); }
     await buildDesktop(desktop, me);
     startClock();
@@ -111,4 +118,5 @@
   };
 
   document.addEventListener('DOMContentLoaded', ()=> boot().catch(e=>console.error('loadSite fatal',e)) );
+  window.addEventListener('auth:me', e=>updateStatus(e.detail||guest));
 })();

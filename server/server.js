@@ -9,12 +9,14 @@ const SITE_ROOT = process.env.SITE_ROOT || '/var/www/html';
 const PORT = Number(process.env.PORT || 3000);
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret';
 const NODE_ENV = process.env.NODE_ENV || 'production';
-const COOKIE_SECURE = (process.env.SESSION_SECURE || 'true').toLowerCase() !== 'false'; // default secure cookies
+// Use secure cookies only when running in production unless explicitly overridden
+const COOKIE_SECURE = (process.env.SESSION_SECURE || NODE_ENV === 'production').toString().toLowerCase() !== 'false';
 
 const DATA_DIR = path.join(SITE_ROOT, 'system', 'data');
 const CHAT_DIR = path.join(SITE_ROOT, 'system', 'chat', 'rooms');
 const USERS_JSON = path.join(DATA_DIR, 'users.json');
 const ADMIN_JSON = path.join(DATA_DIR, 'admin.json');
+const NEW_USERS_LOG = path.join(DATA_DIR, 'new-users.log');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -113,6 +115,16 @@ app.post('/api/register', async (req, res) => {
     }
     users.push(newUser);
     await writeJson(USERS_JSON, users);
+    // Append basic details to an external log
+    try {
+        await fs.appendFile(NEW_USERS_LOG, JSON.stringify({
+            username: newUser.username,
+            tier: newUser.tier,
+            createdAt: new Date().toISOString()
+        }) + '\n');
+    } catch (e) {
+        console.error('Failed to log new user', e);
+    }
     // Log the new user in by initializing session
     req.session.user = { username: newUser.username, name: newUser.name, tier: newUser.tier };
     res.json(req.session.user);

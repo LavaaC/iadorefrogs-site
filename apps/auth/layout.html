@@ -18,20 +18,24 @@
 </head>
 <body>
   <div class="pane">
-    <div id="signed-out" class="group">
+    <div id="login-pane" class="group">
       <b>Log in</b>
       <label>Username</label><input id="li-u">
       <label>Password</label><input id="li-p" type="password">
       <div class="row">
         <button id="btn-login">Log in</button>
+        <button id="show-create">Create account</button>
       </div>
       <div class="status" id="li-status"></div>
-      <hr>
+    </div>
+
+    <div id="create-pane" class="group" style="display:none">
       <b>Create account</b>
       <label>Username</label><input id="su-u">
       <label>Password</label><input id="su-p" type="password">
       <div class="row">
-        <button id="btn-create">Create account</button>
+        <button id="btn-create">Create</button>
+        <button id="show-login">Back</button>
       </div>
       <div class="status" id="su-status"></div>
     </div>
@@ -53,15 +57,21 @@
       try{
         const me = await fetchJSON('/api/me');
         const si = document.getElementById('signed-in');
-        const so = document.getElementById('signed-out');
+        const li = document.getElementById('login-pane');
+        const cr = document.getElementById('create-pane');
         if (me && me.username){
-          so.style.display='none'; si.style.display='';
+          li.style.display='none';
+          cr.style.display='none';
+          si.style.display='';
           document.getElementById('me-name').textContent = me.username + (me.tier ? ` (${me.tier})` : '');
         }else{
-          so.style.display=''; si.style.display='none';
+          li.style.display='';
+          cr.style.display='none';
+          si.style.display='none';
         }
       }catch{
-        document.getElementById('signed-out').style.display='';
+        document.getElementById('login-pane').style.display='';
+        document.getElementById('create-pane').style.display='none';
         document.getElementById('signed-in').style.display='none';
       }
     }
@@ -86,6 +96,15 @@
         await fetchJSON('/api/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
         window.top.location.reload();
       }catch(e){ st.textContent='Account creation failed.'; }
+    };
+
+    document.getElementById('show-create').onclick = ()=>{
+      document.getElementById('login-pane').style.display='none';
+      document.getElementById('create-pane').style.display='';
+    };
+    document.getElementById('show-login').onclick = ()=>{
+      document.getElementById('login-pane').style.display='';
+      document.getElementById('create-pane').style.display='none';
     };
 
     document.getElementById('btn-logout').onclick = async ()=>{
