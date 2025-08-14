@@ -1,6 +1,6 @@
 {
   "title": "Account",
-  "icon": "/assets/apps/auth/icon.png",
+  "icon": "/assets/apps/profile/icon.png",
   "access": "guest",
   "w": 480,
   "h": 480
