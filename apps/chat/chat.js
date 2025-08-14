@@ -68,7 +68,9 @@
     return data?.room || sanitizeRoom(name);
   }
   async function apiGetMsgs(room){
-    const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {cache:"no-cache", credentials:"include"});
+
+    const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}?t=${Date.now()}`, {cache:"no-store", credentials:"include"});
+
     if (!r.ok) throw new Error("msgs "+r.status);
     const data = await r.json();
     return Array.isArray(data) ? data : (data.messages || data.msgs || []);
@@ -88,6 +90,9 @@
   function sanitizeRoom(n){ return String(n||"").trim().toLowerCase().replace(/[^a-z0-9_-]/g,"").slice(0,40); }
   function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
   function fmt(ts){ const d = new Date(ts); return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}); }
+  function renderMsg(m){
+    return `<div class="msg"><b>${escapeHtml(m.user)}</b> <span class="ts">${fmt(m.ts)}</span><div class="body">${escapeHtml(m.text)}</div></div>`;
+  }
 
   // ---- pick backend based on env ----
   const listRooms = () => useApi() ? apiListRooms() : lsListRooms();
@@ -126,6 +131,11 @@
     let current = "public";
     let pollTimer = null;
 
+    function appendMsg(m){
+      logEl.insertAdjacentHTML("beforeend", renderMsg(m));
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
     async function drawRooms(){
       const rooms = await listRooms();
       roomsEl.innerHTML = rooms.map(r => `<button class="room-btn ${r===current?"active":""}" data-r="${r}">${escapeHtml(r)}</button>`).join("");
@@ -142,9 +152,9 @@
     async function drawMessages(){
       const raw = await getMsgs(current);
       const msgs = Array.isArray(raw) ? raw : (raw?.messages || raw?.msgs || []);
-      logEl.innerHTML = msgs.map(m =>
-        `<div class="msg"><b>${escapeHtml(m.user)}</b> <span class="ts">${fmt(m.ts)}</span><div class="body">${escapeHtml(m.text)}</div></div>`
-      ).join("");
+
+      logEl.innerHTML = msgs.map(renderMsg).join("");
+
       logEl.scrollTop = logEl.scrollHeight;
     }
 
@@ -154,8 +164,13 @@
       if (!t) return;
       const user = me()?.username || "guest";
       const msg = { user, text: t.slice(0,1000), ts: Date.now() };
-      await postMsg(current, msg);
       txtEl.value = "";
+      appendMsg(msg);
+      try {
+        await postMsg(current, msg);
+      } catch (err) {
+        alert("Failed to send message.");
+      }
       await drawMessages();
     }
 
