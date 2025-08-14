@@ -17,17 +17,21 @@
   let settingsCache=null;
   async function loadSettings(){
     if(settingsCache) return settingsCache;
+
     if(!window.currentUser || !window.currentUser.username){
       settingsCache={};
       return settingsCache;
     }
+
     try{ settingsCache=await getJSON(`${API}/settings`); }
     catch{ settingsCache={}; }
     return settingsCache;
   }
   async function saveSettings(s){
     settingsCache=s;
+
     if(!window.currentUser || !window.currentUser.username) return;
+
     try{ await putJSON(`${API}/settings`, s); }catch{}
   }
 
