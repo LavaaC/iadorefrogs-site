@@ -1,67 +1,85 @@
 // system/startmenu/start.v1.js
 (() => {
-  function ensureStartUI() {
-    const bar = document.getElementById('taskbar') || document.body.appendChild(Object.assign(document.createElement('div'),{id:'taskbar',className:'taskbar'}));
-    let btn = document.getElementById('start-button'); if(!btn){ btn=document.createElement('button'); btn.id='start-button'; btn.className='start'; btn.textContent='Start'; bar.appendChild(btn); }
-    if(!document.querySelector('.spacer')){ bar.appendChild(Object.assign(document.createElement('div'),{className:'spacer'})); }
-    if(!document.querySelector('.clock')){ bar.appendChild(Object.assign(document.createElement('div'),{className:'clock'})); }
-    let menu= document.getElementById('start-menu'); if(!menu){ menu=document.createElement('div'); menu.id='start-menu'; menu.className='start-menu hidden'; document.body.appendChild(menu); }
-    return {btn,menu};
+  const $ = (s, r=document) => r.querySelector(s);
+
+  function ensureChrome() {
+    const bar = $('#taskbar');
+    const menu = $('#start-menu');
+    const btn = $('#start-button');
+    if (!bar || !menu || !btn) return null;
+    return { bar, menu, btn };
   }
 
-  function buildMenu(menu){
-    const me = window.currentUser || { tier:'guest' };
-    menu.innerHTML = '';
+  function mkItem(menu, label, onClick) {
+    const el = document.createElement('div');
+    el.textContent = label;
+    el.className = 'start-item';
+    el.onclick = () => { try { onClick(); } finally { menu.classList.add('hidden'); } };
+    menu.appendChild(el);
+  }
 
-    const mk = (label, on) => {
-      const el = document.createElement('div');
-      el.textContent = label;
-      el.style.padding = '6px 8px';
-      el.style.cursor = 'pointer';
-      el.onclick = () => { on(); menu.classList.add('hidden'); };
-      menu.appendChild(el);
-    };
+  function buildMenu(menu) {
+    menu.innerHTML = '';
+    const me = window.currentUser || { tier: 'guest' };
 
     if (me.username) {
-      mk(`Logged in as ${me.username}`, ()=>{});
-      mk('Logout', async ()=>{
+      mkItem(menu, `Logged in as ${me.username}${me.tier ? ' ('+me.tier+')' : ''}`, () => {});
+      mkItem(menu, 'Logout', async () => {
         try { await window.auth?.logout?.(); } catch {}
         window.location.reload();
       });
     } else {
-      // Open Auth window instead of prompt popups
-      mk('Login / Create account', ()=>{
-        if (window.WM?.open) {
-          window.WM.open({
-            id: 'auth',
-            title: 'Account',
-            icon: '/assets/apps/auth/icon.png',
-            url: '/apps/auth/layout.html',
-            w: 420, h: 360, x: 80, y: 80
-          });
-        } else {
-          // fallback (shouldn't happen in your stack)
-          alert('Window manager not ready.');
-        }
+      mkItem(menu, 'Login / Create account', () => {
+        window.WM?.open({
+          id: 'auth',
+          title: 'Account',
+          icon: '/assets/apps/auth/icon.png',
+          url: '/apps/auth/layout.html',
+          w: 420, h: 360, x: 80, y: 80
+        });
       });
     }
 
-    // Developer tools (unchanged)
+    // Always visible utilities (open if present)
+    mkItem(menu, 'Customize', () => {
+      window.WM?.open({
+        id: 'customize',
+        title: 'Customize',
+        icon: '/assets/apps/customize/icon.png',
+        url: '/apps/customize/layout.html',
+        w: 520, h: 420, x: 120, y: 110
+      });
+    });
+    mkItem(menu, 'Bug Report', () => {
+      window.WM?.open({
+        id: 'bug',
+        title: 'Bug Report',
+        icon: '/assets/apps/bug/icon.png',
+        url: '/apps/bug/layout.html',
+        w: 520, h: 420, x: 140, y: 130
+      });
+    });
+
+    // Developer-only tools
     if (me.tier === 'devmode') {
-      mk('Admin: Apps & Tiers', () => { document.dispatchEvent(new Event('ui:openAdminApps')); });
-      mk('Admin: Users',       () => { document.dispatchEvent(new Event('ui:openAdminUsers')); });
+      mkItem(menu, 'Admin: Apps & Tiers', () => document.dispatchEvent(new Event('ui:openAdminApps')));
+      mkItem(menu, 'Admin: Users',       () => document.dispatchEvent(new Event('ui:openAdminUsers')));
+      mkItem(menu, 'Dev: App Mode',      () => document.dispatchEvent(new Event('ui:openDevAppMode')));
     }
   }
 
-  function wire(){
-    const {btn,menu} = ensureStartUI();
-    const toggle = ()=> {
+  function wire() {
+    const chrome = ensureChrome();
+    if (!chrome) return;
+    const { btn, menu } = chrome;
+
+    const toggle = () => {
       const hidden = menu.classList.contains('hidden');
       if (hidden) { buildMenu(menu); menu.classList.remove('hidden'); }
-      else { menu.classList.add('hidden'); }
+      else menu.classList.add('hidden');
     };
-    btn.onclick = (e)=>{ e.stopPropagation(); toggle(); };
-    document.addEventListener('click', ()=> menu.classList.add('hidden'));
+    btn.onclick = (e) => { e.stopPropagation(); toggle(); };
+    document.addEventListener('click', () => menu.classList.add('hidden'));
   }
 
   window.addEventListener('auth:me', wire);

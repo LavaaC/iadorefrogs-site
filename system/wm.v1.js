@@ -1,146 +1,166 @@
 // system/wm.v1.js
 (() => {
-  let z = 1000;
+  const zBase = 1000;
+  let zCounter = zBase;
+  const wins = new Map();   // id -> { win, btn, iframe, state }
 
-  function qs(sel, root=document){ return root.querySelector(sel); }
-  function qsa(sel, root=document){ return Array.from(root.querySelectorAll(sel)); }
+  const $ = (s, r=document) => r.querySelector(s);
+  const tasks = () => $('#tasks') || document.body.appendChild(Object.assign(document.createElement('div'),{id:'tasks',className:'tasks'}));
 
-  function bringToFront(win){
-    z += 1;
-    win.style.zIndex = z;
-    qsa('.window').forEach(w => w.classList.remove('active-window'));
-    win.classList.add('active-window');
+  function bringToFront(id) {
+    const w = wins.get(id);
+    if (!w) return;
+    // deactivate all task buttons
+    for (const { btn } of wins.values()) btn.classList.remove('active');
+    // focus this one
+    w.btn.classList.add('active');
+    w.win.classList.add('active-window');
+    w.win.style.zIndex = ++zCounter;
   }
 
-  function createTaskButton(win){
-    const tasks = qs('#tasks') || (() => {
-      const t = document.createElement('div');
-      t.id='tasks'; t.className='tasks';
-      (qs('#taskbar')||document.body).appendChild(t);
-      return t;
-    })();
+  function minimize(id) {
+    const w = wins.get(id);
+    if (!w) return;
+    w.state.minimized = true;
+    w.win.style.display = 'none';
+    w.btn.classList.remove('active');
+  }
 
-    const btn = document.createElement('button');
-    btn.className = 'taskbtn';
-    const ico = document.createElement('img');
-    ico.className = 'taskicon';
-    ico.src = win.dataset.icon || '/assets/favicon.png';
+  function restore(id) {
+    const w = wins.get(id);
+    if (!w) return;
+    w.state.minimized = false;
+    w.win.style.display = '';           // ensure visible regardless of CSS defaults
+    bringToFront(id);
+  }
+
+  function close(id) {
+    const w = wins.get(id);
+    if (!w) return;
+    w.win.remove();
+    w.btn.remove();
+    wins.delete(id);
+  }
+
+  function createTaskButton(id, title, icon) {
+    const b = document.createElement('button');
+    b.className = 'taskbtn';
+    const img = document.createElement('img');
+    img.className = 'taskicon';
+    img.src = icon || '/assets/favicon.png';
     const span = document.createElement('span');
     span.className = 'tasklabel';
-    span.textContent = win.dataset.title || win.id || 'App';
-    btn.appendChild(ico); btn.appendChild(span);
+    span.textContent = title || id;
+    b.appendChild(img); b.appendChild(span);
+    b.onclick = () => {
+      const w = wins.get(id);
+      if (!w) return;
+      if (w.state.minimized) restore(id);
+      else if (w.btn.classList.contains('active')) minimize(id);
+      else restore(id);
+    };
+    tasks().appendChild(b);
+    return b;
+  }
 
-    btn.addEventListener('click', () => {
-      if (win.classList.contains('minimized')) {
-        win.classList.remove('minimized');
-        win.style.display = '';
-        bringToFront(win);
-        btn.classList.add('active');
-      } else if (qs('.active-window') === win) {
-        // minimize if active
-        win.classList.add('minimized');
-        win.style.display = 'none';
-        btn.classList.remove('active');
-      } else {
-        bringToFront(win);
-        btn.classList.add('active');
-      }
+  function makeDraggable(win, titlebar) {
+    let sx=0, sy=0, ox=0, oy=0, dragging=false;
+    titlebar.onmousedown = (e) => {
+      if (e.target.closest('.controls')) return; // don't drag on controls
+      dragging = true;
+      sx = e.clientX; sy = e.clientY;
+      const rect = win.getBoundingClientRect();
+      ox = rect.left; oy = rect.top;
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    };
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      win.style.left = Math.max(0, ox + dx) + 'px';
+      win.style.top  = Math.max(0, oy + dy) + 'px';
     });
-
-    win._taskBtn = btn;
-    tasks.appendChild(btn);
-    btn.classList.add('active');
-  }
-
-  function openWindow(win){
-    document.getElementById('windows')?.appendChild(win);
-    createTaskButton(win);
-    bringToFront(win);
-  }
-
-  function minimizeWindow(win){
-    win.classList.add('minimized');
-    win.style.display = 'none';
-    win._taskBtn && win._taskBtn.classList.remove('active');
-  }
-
-  function closeWindow(win){
-    win._taskBtn && win._taskBtn.remove();
-    win.remove();
-  }
-
-  function attachWindowControls(win){
-    const bar = win.querySelector('.titlebar');
-    const min = win.querySelector('[data-min]');
-    const cls = win.querySelector('[data-close]');
-
-    win.addEventListener('mousedown', () => bringToFront(win));
-
-    min && min.addEventListener('click', (e)=>{ e.stopPropagation(); minimizeWindow(win); });
-    cls && cls.addEventListener('click', (e)=>{ e.stopPropagation(); closeWindow(win); });
-
-    // Drag by titlebar
-    let dragging=false, sx=0, sy=0, ox=0, oy=0;
-    bar && bar.addEventListener('mousedown', (e)=>{
-      dragging=true; sx=e.clientX; sy=e.clientY; ox=win.offsetLeft; oy=win.offsetTop; e.preventDefault();
-      bringToFront(win);
+    window.addEventListener('mouseup', () => {
+      dragging = false;
+      document.body.style.userSelect = '';
     });
-    window.addEventListener('mousemove', (e)=>{
-      if(!dragging) return;
-      win.style.left = (ox + e.clientX - sx) + 'px';
-      win.style.top  = (oy + e.clientY - sy) + 'px';
-    });
-    window.addEventListener('mouseup', ()=> dragging=false);
   }
 
-  // New: WM.open for apps
-  function open(opts) {
+  function createWindow({ id, title, icon, url, w=640, h=480, x=120, y=90 }) {
     const win = document.createElement('div');
-    win.id = opts.id ? `win-${opts.id}` : `win-${Date.now()}`;
-    win.className = 'window';
-    if (opts.title) win.dataset.title = opts.title;
-    if (opts.icon)  win.dataset.icon  = opts.icon;
+    win.className = 'window active-window';
+    win.style.position = 'absolute';
+    win.style.left = x + 'px';
+    win.style.top  = y + 'px';
+    win.style.width = w + 'px';
+    win.style.height = h + 'px';
+    win.style.display = '';                // force visible
 
-    // Titlebar + controls
     const titlebar = document.createElement('div');
     titlebar.className = 'titlebar';
-    const title = document.createElement('span');
-    title.className = 'title';
-    title.textContent = opts.title || opts.id || '';
-    const controls = document.createElement('div');
-    controls.className = 'controls';
-    const minBtn = document.createElement('button');
-    minBtn.className = 'btn'; minBtn.setAttribute('data-min',''); minBtn.textContent = '_';
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'btn'; closeBtn.setAttribute('data-close',''); closeBtn.textContent = '✕';
-    controls.appendChild(minBtn); controls.appendChild(closeBtn);
-    titlebar.appendChild(title); titlebar.appendChild(controls);
+    const tspan = document.createElement('span');
+    tspan.className = 'title';
+    tspan.textContent = title || id;
 
-    // Content
+    const ctrls = document.createElement('div');
+    ctrls.className = 'controls';
+    const btnMin = document.createElement('button');
+    btnMin.setAttribute('data-min','');
+    btnMin.textContent = '_';
+    const btnClose = document.createElement('button');
+    btnClose.setAttribute('data-close','');
+    btnClose.textContent = '×';
+    ctrls.appendChild(btnMin);
+    ctrls.appendChild(btnClose);
+
+    titlebar.appendChild(tspan);
+    titlebar.appendChild(ctrls);
+
     const content = document.createElement('div');
     content.className = 'content';
-    if (opts.url) {
-      const iframe = document.createElement('iframe');
-      Object.assign(iframe.style, {width:'100%',height:'100%',border:'0'});
-      iframe.src = opts.url;
-      content.appendChild(iframe);
-    }
+    const iframe = document.createElement('iframe');
+    iframe.src = url || 'about:blank';
+    iframe.setAttribute('frameborder','0');
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.display = 'block';
+    content.appendChild(iframe);
 
     win.appendChild(titlebar);
     win.appendChild(content);
+    document.body.appendChild(win);
 
-    // Geometry
-    win.style.left = (opts.x || 60) + 'px';
-    win.style.top  = (opts.y || 60) + 'px';
-    if (opts.w) win.style.width  = opts.w + 'px';
-    if (opts.h) win.style.height = opts.h + 'px';
+    // z / focus
+    win.addEventListener('mousedown', () => bringToFront(id));
 
-    document.getElementById('windows')?.appendChild(win);
-    attachWindowControls(win);
-    openWindow(win);
-    return win;
+    // controls
+    btnMin.onclick   = () => minimize(id);
+    btnClose.onclick = () => close(id);
+
+    // dragging
+    makeDraggable(win, titlebar);
+
+    return { win, iframe };
   }
 
-  // Expose WM API
-  window.WM = { openWindow, minimizeWindow, closeWindow, attachWindowControls, open, bringToFront };
+  function open(opts) {
+    if (!opts || !opts.id) throw new Error('WM.open requires {id}');
+    const id = opts.id;
+
+    // Single-instance: if exists, restore + focus instead of creating another
+    if (wins.has(id)) {
+      restore(id);
+      return wins.get(id);
+    }
+
+    const { win, iframe } = createWindow(opts);
+    const btn = createTaskButton(id, opts.title || opts.id, opts.icon);
+    const state = { minimized: false };
+    wins.set(id, { win, btn, iframe, state, opts });
+
+    bringToFront(id);
+    return wins.get(id);
+  }
+
+  window.WM = { open, close, minimize, restore, bringToFront, get: id => wins.get(id) };
 })();

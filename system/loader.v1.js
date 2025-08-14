@@ -34,53 +34,52 @@
     tick(); clearInterval(startClock._t); startClock._t=setInterval(tick,1000);
   }
 
-  async function openAppWindow(app){
-    const url=`/apps/${app.id}/layout.html`;
-    if (window.WM?.open) return window.WM.open({ id:app.id, title:app.title||app.id, icon:app.icon, url });
-    const win=document.createElement('div');
-    Object.assign(win.style,{position:'absolute',left:(app.x||60)+'px',top:(app.y||60)+'px',width:(app.w||560)+'px',height:(app.h||400)+'px',background:'#1f1f1f',color:'#fff',border:'1px solid #444',boxShadow:'0 4px 16px rgba(0,0,0,.5)',zIndex:1000});
-    const bar=document.createElement('div'); bar.textContent=app.title||app.id; Object.assign(bar.style,{background:'#2b2b2b',padding:'6px 8px',cursor:'move',userSelect:'none'});
-    const x=document.createElement('button'); x.textContent='✕'; Object.assign(x.style,{float:'right',background:'transparent',color:'#fff',border:'none',cursor:'pointer'}); x.onclick=()=>win.remove();
-    bar.appendChild(x);
-    const body=document.createElement('div'); Object.assign(body.style,{width:'100%',height:'calc(100% - 32px)',background:'#fff'});
-    const iframe=document.createElement('iframe'); Object.assign(iframe.style,{width:'100%',height:'100%',border:'0'}); iframe.src=url;
-    body.appendChild(iframe); win.appendChild(bar); win.appendChild(body);
-    document.getElementById('windows').appendChild(win);
-    let sx=0,sy=0,ox=0,oy=0,on=false;
-    bar.addEventListener('mousedown',e=>{on=true;sx=e.clientX;sy=e.clientY;ox=win.offsetLeft;oy=win.offsetTop;e.preventDefault();});
-    window.addEventListener('mousemove',e=>{if(!on)return;win.style.left=(ox+e.clientX-sx)+'px';win.style.top=(oy+e.clientY-sy)+'px';});
-    window.addEventListener('mouseup',()=>on=false);
+  async function openAppWindow(app) {
+  const url = app.url || (app.path || `/apps/${app.id}/layout.html`);
+  const icon = app.icon || `/assets/apps/${app.id}/icon.png`;
+  const title = app.title || app.id;
+
+  if (window.WM?.open) {
+    window.WM.open({
+      id: app.id, title, icon, url,
+      w: app.w || 640, h: app.h || 480,
+      x: app.x || 120, y: app.y || 90
+    });
+    return;
   }
+
+  // Fallback if WM not present (should not happen)
+  window.open(url, '_blank', 'noopener');
+}
+
 
   function iconPath(id, icon){ if(!icon||!icon.trim()) return `/assets/apps/${id}/icon.png`; if(icon.startsWith('/')||icon.startsWith('http')) return icon; return `/assets/apps/${id}/${icon}`; }
   function addIcon(desktop, app) {
-    // Create icon container using existing CSS classes
-    const iconEl = document.createElement('div');
-    iconEl.className = 'icon';  // Windows 95 icon style container (.icon)
-    
-    // Create inner image wrapper and image
-    const imgWrap = document.createElement('div');
-    imgWrap.className = 'icon-img';  // fixed 64x64 icon frame
-    const img = document.createElement('img');
-    img.src = app.icon;
-    img.className = 'desk-icon-img'; // actual icon image (pixelated style)
-    imgWrap.appendChild(img);
-    
-    // Create label for the icon
-    const label = document.createElement('div');
-    label.className = 'label';  // Windows 95 style label (white text with shadow)
-    label.textContent = app.title || app.id;
-    
-    // Assemble icon element
-    iconEl.appendChild(imgWrap);
-    iconEl.appendChild(label);
-    // Single-click to open the app window
-    iconEl.onclick = () => openAppWindow(app);
-    
-    // Append to the #icons container (or desktop as fallback)
-    const container = document.getElementById('icons') || desktop;
-    container.appendChild(iconEl);
+  const iconEl = document.createElement('div');
+  iconEl.className = 'icon';
+
+  const imgWrap = document.createElement('div');
+  imgWrap.className = 'icon-img';
+  const img = document.createElement('img');
+  img.className = 'desk-icon-img';
+  img.src = app.icon || `/assets/apps/${app.id}/icon.png`;
+  imgWrap.appendChild(img);
+
+  const label = document.createElement('div');
+  label.className = 'label';
+  label.textContent = app.title || app.id;
+
+  iconEl.appendChild(imgWrap);
+  iconEl.appendChild(label);
+
+  iconEl.onclick = (e) => {
+    e.stopPropagation();
+    openAppWindow(app);
+  };
+
+  (document.getElementById('icons') || desktop).appendChild(iconEl);
 }
+
 
   async function buildDesktop(desktop, me){
     let ids=[]; try{ ids=await getJSON('/apps/apps.json'); }catch(e){ console.warn('apps.json failed',e); }
