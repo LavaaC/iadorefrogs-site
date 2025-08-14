@@ -57,10 +57,10 @@
   async function apiCreateRoom(name){
     const r = await fetch(`${SITE().apiBase}/chat/rooms`, {
       method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ name: sanitizeRoom(name) })
+      body: JSON.stringify({ room: sanitizeRoom(name) })
     });
     if (!r.ok) throw new Error("create "+r.status);
-    return (await r.json())?.name || sanitizeRoom(name);
+    return (await r.json())?.room || sanitizeRoom(name);
   }
   async function apiGetMsgs(room){
     const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {cache:"no-cache"});

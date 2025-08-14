@@ -45,10 +45,10 @@
   }
 
   // API backend
-  async function apiListRooms(){ const r = await fetch(`${SITE().apiBase}/chat/rooms`, {cache:"no-cache"}); if(!r.ok) throw new Error("rooms "+r.status); return r.json(); }
-  async function apiCreateRoom(name){ const r = await fetch(`${SITE().apiBase}/chat/rooms`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ room: sanitizeRoom(name) }) }); if(!r.ok) throw new Error("create "+r.status); return (await r.json())?.room || sanitizeRoom(name); }
-  async function apiGetMsgs(room){ const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {cache:"no-cache"}); if(!r.ok) throw new Error("msgs "+r.status); return r.json(); }
-  async function apiPostMsg(room, msg){ const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(msg) }); if(!r.ok) throw new Error("post "+r.status); }
+  async function apiListRooms(){ const r = await fetch(`${SITE().apiBase}/chat/rooms`, {cache:"no-cache", credentials:"include"}); if(!r.ok) throw new Error("rooms "+r.status); return r.json(); }
+  async function apiCreateRoom(name){ const r = await fetch(`${SITE().apiBase}/chat/rooms`, { method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body: JSON.stringify({ room: sanitizeRoom(name) }) }); if(!r.ok) throw new Error("create "+r.status); return (await r.json())?.room || sanitizeRoom(name); }
+  async function apiGetMsgs(room){ const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {cache:"no-cache", credentials:"include"}); if(!r.ok) throw new Error("msgs "+r.status); return r.json(); }
+  async function apiPostMsg(room, msg){ const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, { method:"POST", headers:{"Content-Type":"application/json"}, credentials:"include", body: JSON.stringify(msg) }); if(!r.ok) throw new Error("post "+r.status); }
 
   const listRooms = () => useApi() ? apiListRooms() : lsListRooms();
   const createRoom = (n) => useApi() ? apiCreateRoom(n) : lsCreateRoom(n);
