@@ -21,16 +21,15 @@
 <body>
   <div id="apps"></div>
 
-  <div class="buttons">
-    <button id="save">Save</button>
-    <button id="cancel">Cancel</button>
-  </div>
+    <div class="buttons">
+      <button id="save">Save</button>
+    </div>
   <script>
     async function load(){
-      try{return await window.top.getJSON('/api/settings');}catch{return{};}
+      try{return await window.top.loadSettings?.();}catch{return{};}
     }
     async function save(s){
-      try{await window.top.putJSON('/api/settings', s);}catch{}
+      try{await window.top.saveSettings?.(s);}catch{}
     }
 
     async function init(){
@@ -39,7 +38,9 @@
         return;
       }
       const listEl=document.getElementById('apps');
-      const ids=await (await fetch('../apps.json')).json();
+      let ids=[];
+      try{ ids=await (await fetch('../apps.json')).json(); }
+      catch{ listEl.textContent='Failed to load apps.'; return; }
       const settings=await load();
 
       const order=(settings.pinnedOrder&&settings.pinnedOrder.filter(id=>ids.includes(id)))||ids.slice();
@@ -75,10 +76,9 @@
         });
         s.pinnedOrder=Array.from(listEl.children).map(r=>r.dataset.id);
         await save(s);
-        await window.top.applyDesktopSettings?.();
+        await window.top.refreshDesktop?.();
         window.top.WM?.close('customize');
       };
-      document.getElementById('cancel').onclick=()=>{window.top.WM?.close('customize');};
 
     }
     init();
