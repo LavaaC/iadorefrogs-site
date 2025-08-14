@@ -35,6 +35,7 @@
           icon: 'assets/apps/auth/icon.png',
           url: `apps/auth/layout.html${hash}`,
           w: 520, h: 600, x: 80, y: 80
+
         });
         if (inst?.iframe) inst.iframe.src = `apps/auth/layout.html${hash}`;
       };

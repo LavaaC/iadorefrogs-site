@@ -101,6 +101,7 @@
         await fetchJSON('/api/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
         await window.top.auth.login(u,p);
         window.top.WM?.close('auth');
+
       }catch(e){ st.textContent='Account creation failed.'; }
     };
 
