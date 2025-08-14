@@ -70,7 +70,8 @@
   async function apiGetMsgs(room){
     const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {cache:"no-cache", credentials:"include"});
     if (!r.ok) throw new Error("msgs "+r.status);
-    return r.json();
+    const data = await r.json();
+    return Array.isArray(data) ? data : (data.messages || data.msgs || []);
   }
   async function apiPostMsg(room, msg){
     const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {
@@ -139,7 +140,8 @@
     }
 
     async function drawMessages(){
-      const msgs = await getMsgs(current);
+      const raw = await getMsgs(current);
+      const msgs = Array.isArray(raw) ? raw : (raw?.messages || raw?.msgs || []);
       logEl.innerHTML = msgs.map(m =>
         `<div class="msg"><b>${escapeHtml(m.user)}</b> <span class="ts">${fmt(m.ts)}</span><div class="body">${escapeHtml(m.text)}</div></div>`
       ).join("");
