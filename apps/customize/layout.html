@@ -12,6 +12,7 @@
     .row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
     .row img{width:16px;height:16px}
     .name{min-width:80px}
+    .row input[type=number]{width:40px}
     label{margin-right:10px}
     button{background:#c0c0c0;border:2px outset #fff;padding:2px 6px;cursor:pointer}
     button:active{border:2px inset #fff}
@@ -61,12 +62,16 @@
         const meta=metas[id]||{};
         const title=meta.title||id;
         const icon=meta.icon?(meta.icon.startsWith('/')||meta.icon.startsWith('http')?meta.icon:`../${id}/${meta.icon}`):`../assets/apps/${id}/icon.png`;
+        const posX = s.x ?? meta.x ?? '';
+        const posY = s.y ?? meta.y ?? '';
         const row=document.createElement('div');
         row.className='row';
         row.dataset.id=id;
         row.innerHTML=`<img src="${icon}" alt="">`+
           `<span class="name">${title}</span>`+
           `<button class="up">\u25B2</button><button class="down">\u25BC</button>`+
+          `<label>X:<input type="number" class="x" value="${posX}"></label>`+
+          `<label>Y:<input type="number" class="y" value="${posY}"></label>`+
           `<label><input type="checkbox" class="show" ${s.show!==false?'checked':''}> Show</label>`+
           `<label><input type="checkbox" class="pin" ${s.pinned?'checked':''}> Pin</label>`;
         listEl.appendChild(row);
@@ -88,10 +93,14 @@
           s[id]=s[id]||{};
           s[id].show=row.querySelector('.show').checked;
           s[id].pinned=row.querySelector('.pin').checked;
+          const xVal=parseInt(row.querySelector('.x').value,10);
+          const yVal=parseInt(row.querySelector('.y').value,10);
+          if(!isNaN(xVal)) s[id].x=xVal; else delete s[id].x;
+          if(!isNaN(yVal)) s[id].y=yVal; else delete s[id].y;
         });
         s.pinnedOrder=Array.from(listEl.children).map(r=>r.dataset.id);
         await save(s);
-        await window.top.refreshDesktop?.();
+        await window.top.applyDesktopSettings?.();
         window.top.WM?.close('customize');
       };
 
