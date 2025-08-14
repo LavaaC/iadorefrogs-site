@@ -112,7 +112,8 @@
       const wp=site.wallpaper||'assets/wallpapers/frogs.jpg';
       Object.assign(document.body.style,{backgroundImage:`url('${wp}')`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'});
     }catch{}
-    let me=guest; try{ me=await getJSON(`${API}/me`);}catch{} window.currentUser=me;
+    let me=guest; window.currentUser=me;
+    try{ me=await getJSON(`${API}/me`); window.currentUser=me; }catch{}
     updateStatus(me);
     if(me.tier==='devmode'){ getJSON(`${API}/admin/settings`).then(s=>window.siteAdmin=s).catch(()=>{}); }
     await buildDesktop(desktop, me);
