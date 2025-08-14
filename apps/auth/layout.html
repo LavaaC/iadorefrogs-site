@@ -6,8 +6,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     html,body{height:100%}
-    body{margin:0;font:13px Tahoma, "MS Sans Serif", Arial, sans-serif;background:#fff;color:#000;display:flex;align-items:center;justify-content:center}
-    .pane{padding:10px}
+    body{margin:0;font:13px Tahoma, "MS Sans Serif", Arial, sans-serif;background:#fff;color:#000;display:flex;align-items:stretch;justify-content:center}
+    .pane{padding:10px;height:100%;box-sizing:border-box;display:flex;flex-direction:column}
+    #login-pane{flex:1}
     .group{border:2px inset #808080; padding:10px; background:#f2f2f2; margin-bottom:10px}
     label{display:block;margin:6px 0 2px}
     input{width:100%; box-sizing:border-box; padding:6px; border:2px inset #808080; background:#fff}
@@ -89,6 +90,7 @@
       try{
         await window.top.auth.login(u,p);
         refreshMe();
+        window.top.WM?.close('auth');
       }catch(e){ st.textContent='Login failed.'; }
     };
 
@@ -101,6 +103,7 @@
         await fetchJSON('/api/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
         await window.top.auth.login(u,p);
         refreshMe();
+        window.top.WM?.close('auth');
       }catch(e){ st.textContent='Account creation failed.'; }
     };
 

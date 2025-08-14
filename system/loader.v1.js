@@ -13,6 +13,9 @@
   window.getJSON=(u,o)=>_fetchJSON(u,o); window.postJSON=(u,d)=>_sendJSON(u,'POST',d); window.putJSON=(u,d)=>_sendJSON(u,'PUT',d);
 
   const guest={username:null,name:'Guest',tier:'guest'};
+  const SETTINGS_KEY='desktop_settings';
+  function loadSettings(){ try{ return JSON.parse(localStorage.getItem(SETTINGS_KEY))||{}; }catch{ return {}; } }
+  function saveSettings(s){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }catch{} }
 
   function ensure(id,cls){let e=document.getElementById(id); if(!e){ e=document.createElement('div'); e.id=id; if(cls)e.className=cls; document.body.appendChild(e);} return e;}
   function ensureChrome(){
@@ -20,6 +23,11 @@
     const taskbar=ensure('taskbar','taskbar');
     if(!document.getElementById('start-button')){
       const b=document.createElement('button'); b.id='start-button'; b.className='start-button'; b.textContent='Start'; taskbar.appendChild(b);
+    }
+    if(!document.getElementById('quick-launch')){
+      const q=document.createElement('div'); q.id='quick-launch'; q.className='quick';
+      const tasks=document.getElementById('tasks');
+      taskbar.insertBefore(q, tasks);
     }
     if(!document.querySelector('.spacer')){ taskbar.appendChild(Object.assign(document.createElement('div'),{className:'spacer'})); }
     if(!document.querySelector('.clock')){ taskbar.appendChild(Object.assign(document.createElement('div'),{className:'clock'})); }
@@ -53,54 +61,112 @@
 }
 
   function iconPath(id, icon){ if(!icon||!icon.trim()) return `assets/apps/${id}/icon.png`; if(icon.startsWith('/')||icon.startsWith('http')) return icon; return `assets/apps/${id}/${icon}`; }
-  function addIcon(desktop, app) {
-  const iconEl = document.createElement('div');
-  iconEl.className = 'icon';
 
-  const imgWrap = document.createElement('div');
-  imgWrap.className = 'icon-img';
-  const img = document.createElement('img');
-  img.className = 'desk-icon-img';
-  img.src = app.icon || `assets/apps/${app.id}/icon.png`;
-  imgWrap.appendChild(img);
+  function addQuickIcon(quick, app){
+    if(!quick) return;
+    const btn=document.createElement('button');
+    btn.className='ql';
+    const img=document.createElement('img');
+    img.className='ql-img';
+    img.src=app.icon || `assets/apps/${app.id}/icon.png`;
+    btn.appendChild(img);
+    btn.onclick=(e)=>{ e.stopPropagation(); openAppWindow(app); };
+    quick.appendChild(btn);
+  }
 
-  const label = document.createElement('div');
-  label.className = 'label';
-  label.textContent = app.title || app.id;
+  function addIcon(desktop, app){
+    const iconEl = document.createElement('div');
+    iconEl.className = 'icon';
+    iconEl.dataset.id = app.id;
+    iconEl.style.left = (app.x||20)+'px';
+    iconEl.style.top  = (app.y||20)+'px';
 
-  iconEl.appendChild(imgWrap);
-  iconEl.appendChild(label);
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'icon-img';
+    const img = document.createElement('img');
+    img.className = 'desk-icon-img';
+    img.src = app.icon || `assets/apps/${app.id}/icon.png`;
+    imgWrap.appendChild(img);
 
-  iconEl.onclick = (e) => {
-    e.stopPropagation();
-    openAppWindow(app);
-  };
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = app.title || app.id;
 
-  (document.getElementById('icons') || desktop).appendChild(iconEl);
-}
+    iconEl.appendChild(imgWrap);
+    iconEl.appendChild(label);
+
+    iconEl.onclick = (e) => {
+      e.stopPropagation();
+      openAppWindow(app);
+    };
+
+    let drag=false,sx=0,sy=0,ox=0,oy=0;
+    iconEl.addEventListener('mousedown',e=>{
+      if(e.button!==0) return;
+      drag=true; sx=e.clientX; sy=e.clientY;
+      const r=iconEl.getBoundingClientRect();
+      ox=r.left; oy=r.top; document.body.style.userSelect='none';
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove',e=>{
+      if(!drag) return;
+      const dx=e.clientX-sx, dy=e.clientY-sy;
+      iconEl.style.left=(ox+dx)+'px';
+      iconEl.style.top =(oy+dy)+'px';
+    });
+    window.addEventListener('mouseup',()=>{
+      if(!drag) return;
+      drag=false; document.body.style.userSelect='';
+      const s=loadSettings();
+      s[app.id]=s[app.id]||{};
+      s[app.id].x=parseInt(iconEl.style.left)||0;
+      s[app.id].y=parseInt(iconEl.style.top)||0;
+      saveSettings(s);
+    });
+
+    (document.getElementById('icons') || desktop).appendChild(iconEl);
+  }
 
 
   async function buildDesktop(desktop, me){
+    const quick=document.getElementById('quick-launch');
+    if(quick) quick.innerHTML='';
+    const settings=loadSettings();
     let ids=[]; try{ ids=await getJSON('apps/apps.json'); }catch(e){ console.warn('apps.json failed',e); }
     if(!Array.isArray(ids)) ids=[];
+    let idx=0;
     for(const id of ids){
       try{
         const meta=await getJSON(`apps/${id}/app.json`);
-        addIcon(desktop,{ id, title:meta.title||id, icon:iconPath(id,meta.icon), x:meta.x,y:meta.y,w:meta.w,h:meta.h });
+        const s=settings[id]||{};
+        if(s.show===false) continue;
+        const posX = s.x ?? meta.x ?? (20 + (idx%5)*110);
+        const posY = s.y ?? meta.y ?? (20 + Math.floor(idx/5)*110);
+        addIcon(desktop,{ id, title:meta.title||id, icon:iconPath(id,meta.icon), x:posX, y:posY, w:meta.w, h:meta.h });
+        if(s.pinned) addQuickIcon(quick,{ id, title:meta.title||id, icon:iconPath(id,meta.icon), w:meta.w, h:meta.h });
+        if(!settings[id]) settings[id]={};
+        if(settings[id].show===undefined) settings[id].show=true;
+        if(settings[id].x===undefined) settings[id].x=posX;
+        if(settings[id].y===undefined) settings[id].y=posY;
+        idx++;
       }catch(e){ console.warn(`app ${id} meta failed`,e); }
     }
+    saveSettings(settings);
   }
 
   function updateStatus(me){
     const el=document.getElementById('user-status');
+    const q=document.getElementById('quick-note-user');
     if(!el) return;
     const cap = s => s ? s.charAt(0).toUpperCase()+s.slice(1) : s;
     if(me && (me.username || me.id)){
       const id = me.id ?? me.username;
       const status = cap(me.status ?? me.tier);
       el.textContent = status ? `${id} (${status})` : `${id}`;
+      if(q) q.textContent=id;
     }else{
       el.textContent='Guest';
+      if(q) q.textContent='Guest';
     }
   }
 

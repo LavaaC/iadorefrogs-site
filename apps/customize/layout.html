@@ -4,9 +4,39 @@
   <meta charset="utf-8">
   <title>Customize</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>body{margin:0;padding:10px;font:13px Tahoma,"MS Sans Serif",Arial,sans-serif;background:#fff;color:#000}</style>
+  <style>
+    body{margin:0;padding:10px;font:13px Tahoma,"MS Sans Serif",Arial,sans-serif;background:#fff;color:#000}
+    .row{margin-bottom:8px}
+    label{margin-right:10px}
+  </style>
 </head>
 <body>
-  <p>Customization options coming soon.</p>
+  <div id="apps"></div>
+  <script>
+    const KEY='desktop_settings';
+    function load(){ try{return JSON.parse(window.top.localStorage.getItem(KEY))||{};}catch{return{};} }
+    function save(s){ try{window.top.localStorage.setItem(KEY, JSON.stringify(s));}catch{} }
+    async function init(){
+      const listEl=document.getElementById('apps');
+      const ids=await (await fetch('../apps.json')).json();
+      const settings=load();
+      ids.forEach(id=>{
+        const s=settings[id]||{};
+        const row=document.createElement('div');
+        row.className='row';
+        row.innerHTML=`<label><input type="checkbox" class="show" data-id="${id}" ${s.show!==false?'checked':''}> Show</label>`+
+          `<label><input type="checkbox" class="pin" data-id="${id}" ${s.pinned?'checked':''}> Pin</label> ${id}`;
+        listEl.appendChild(row);
+      });
+      listEl.querySelectorAll('.show').forEach(cb=>{
+        cb.onchange=()=>{const id=cb.dataset.id;const s=load();s[id]=s[id]||{};s[id].show=cb.checked;save(s);window.top.location.reload();};
+      });
+      listEl.querySelectorAll('.pin').forEach(cb=>{
+        cb.onchange=()=>{const id=cb.dataset.id;const s=load();s[id]=s[id]||{};s[id].pinned=cb.checked;save(s);window.top.location.reload();};
+      });
+    }
+    init();
+  </script>
 </body>
 </html>
+
