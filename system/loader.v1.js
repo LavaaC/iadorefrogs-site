@@ -94,9 +94,10 @@
   function updateStatus(me){
     const el=document.getElementById('user-status');
     if(!el) return;
+    const cap = s => s ? s.charAt(0).toUpperCase()+s.slice(1) : s;
     if(me && (me.username || me.id)){
       const id = me.id ?? me.username;
-      const status = me.status ?? me.tier;
+      const status = cap(me.status ?? me.tier);
       el.textContent = status ? `${id} (${status})` : `${id}`;
     }else{
       el.textContent='Guest';

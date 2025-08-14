@@ -26,7 +26,6 @@
       mkItem(menu, `Logged in as ${me.username}${me.tier ? ' ('+me.tier+')' : ''}`, () => {});
       mkItem(menu, 'Logout', async () => {
         try { await window.auth?.logout?.(); } catch {}
-        window.location.reload();
       });
     } else {
       const openAuth = (hash) => {
@@ -35,7 +34,7 @@
           title: 'Account',
           icon: 'assets/apps/auth/icon.png',
           url: `apps/auth/layout.html${hash}`,
-          w: 420, h: 460, x: 80, y: 80
+          w: 520, h: 600, x: 80, y: 80
         });
         if (inst?.iframe) inst.iframe.src = `apps/auth/layout.html${hash}`;
       };

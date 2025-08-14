@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     html,body{height:100%}
-    body{margin:0;font:13px Tahoma, "MS Sans Serif", Arial, sans-serif;background:#fff;color:#000;display:flex;align-items:center;justify-content:center}
-    .pane{padding:10px}
+    body{margin:0;font:13px Tahoma, "MS Sans Serif", Arial, sans-serif;background:#fff;color:#000;}
+    .pane{padding:10px;height:100%;overflow:auto;box-sizing:border-box}
     .group{border:2px inset #808080; padding:10px; background:#f2f2f2; margin-bottom:10px}
     label{display:block;margin:6px 0 2px}
     input{width:100%; box-sizing:border-box; padding:6px; border:2px inset #808080; background:#fff}
@@ -87,9 +87,9 @@
       const st = document.getElementById('li-status'); st.textContent='';
       if(!u||!p){ st.textContent='Enter username and password.'; return; }
       try{
-        await fetchJSON('/api/login',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
-        window.top.location.reload();
-      }catch(e){ st.textContent='Login failed.'; }
+        await window.top.auth.login(u,p);
+        window.top.WM?.close('auth');
+      }catch(e){ st.textContent='Incorrect Password'; }
     };
 
     document.getElementById('btn-create').onclick = async ()=>{
@@ -99,7 +99,8 @@
       if(!u||!p){ st.textContent='Enter username and password.'; return; }
       try{
         await fetchJSON('/api/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
-        window.top.location.reload();
+        await window.top.auth.login(u,p);
+        window.top.WM?.close('auth');
       }catch(e){ st.textContent='Account creation failed.'; }
     };
 
@@ -109,8 +110,8 @@
     document.getElementById('btn-logout').onclick = async ()=>{
       const st = document.getElementById('lo-status'); st.textContent='';
       try{
-        await fetchJSON('/api/logout',{ method:'POST' });
-        window.top.location.reload();
+        await window.top.auth.logout();
+        refreshMe();
       }catch(e){ st.textContent='Logout failed.'; }
     };
 
