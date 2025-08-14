@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Account</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{margin:0;font:13px Tahoma, "MS Sans Serif", Arial, sans-serif;background:#fff;color:#000}
+    .pane{padding:10px}
+    .group{border:2px inset #808080; padding:10px; background:#f2f2f2; margin-bottom:10px}
+    label{display:block;margin:6px 0 2px}
+    input{width:100%; box-sizing:border-box; padding:6px; border:2px inset #808080; background:#fff}
+    .row{display:flex;gap:8px;margin-top:8px}
+    button{background:#c0c0c0;border:2px outset #ffffff; padding:6px 10px; cursor:pointer}
+    button:active{border:2px inset #ffffff}
+    .status{font-size:12px;color:#333;margin-top:6px}
+  </style>
+</head>
+<body>
+  <div class="pane">
+    <div id="signed-out" class="group">
+      <b>Log in</b>
+      <label>Username</label><input id="li-u">
+      <label>Password</label><input id="li-p" type="password">
+      <div class="row">
+        <button id="btn-login">Log in</button>
+      </div>
+      <div class="status" id="li-status"></div>
+      <hr>
+      <b>Create account</b>
+      <label>Username</label><input id="su-u">
+      <label>Password</label><input id="su-p" type="password">
+      <div class="row">
+        <button id="btn-create">Create account</button>
+      </div>
+      <div class="status" id="su-status"></div>
+    </div>
+
+    <div id="signed-in" class="group" style="display:none">
+      <div>Signed in as <b id="me-name"></b></div>
+      <div class="row" style="margin-top:10px">
+        <button id="btn-logout">Log out</button>
+      </div>
+      <div class="status" id="lo-status"></div>
+    </div>
+  </div>
+
+  <script>
+    // Same-origin with parent, so we can call /api directly and reload top on success
+    async function fetchJSON(u, opt){ const r = await fetch(u, { credentials:'include', ...opt }); if(!r.ok) throw new Error((await r.text())||r.status); return r.json(); }
+
+    async function refreshMe(){
+      try{
+        const me = await fetchJSON('/api/me');
+        const si = document.getElementById('signed-in');
+        const so = document.getElementById('signed-out');
+        if (me && me.username){
+          so.style.display='none'; si.style.display='';
+          document.getElementById('me-name').textContent = me.username + (me.tier ? ` (${me.tier})` : '');
+        }else{
+          so.style.display=''; si.style.display='none';
+        }
+      }catch{
+        document.getElementById('signed-out').style.display='';
+        document.getElementById('signed-in').style.display='none';
+      }
+    }
+
+    document.getElementById('btn-login').onclick = async ()=>{
+      const u = document.getElementById('li-u').value.trim();
+      const p = document.getElementById('li-p').value;
+      const st = document.getElementById('li-status'); st.textContent='';
+      if(!u||!p){ st.textContent='Enter username and password.'; return; }
+      try{
+        await fetchJSON('/api/login',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
+        window.top.location.reload();
+      }catch(e){ st.textContent='Login failed.'; }
+    };
+
+    document.getElementById('btn-create').onclick = async ()=>{
+      const u = document.getElementById('su-u').value.trim();
+      const p = document.getElementById('su-p').value;
+      const st = document.getElementById('su-status'); st.textContent='';
+      if(!u||!p){ st.textContent='Enter username and password.'; return; }
+      try{
+        await fetchJSON('/api/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
+        window.top.location.reload();
+      }catch(e){ st.textContent='Account creation failed.'; }
+    };
+
+    document.getElementById('btn-logout').onclick = async ()=>{
+      const st = document.getElementById('lo-status'); st.textContent='';
+      try{
+        await fetchJSON('/api/logout',{ method:'POST' });
+        window.top.location.reload();
+      }catch(e){ st.textContent='Logout failed.'; }
+    };
+
+    refreshMe();
+  </script>
+</body>
+</html>
