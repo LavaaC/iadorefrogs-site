@@ -50,26 +50,33 @@
 
   // ---- API adapters (Pi) ----
   async function apiListRooms(){
-    const r = await fetch(`${SITE().apiBase}/chat/rooms`, {cache:"no-cache"});
+    const r = await fetch(`${SITE().apiBase}/chat/rooms`, {cache:"no-cache", credentials:"include"});
     if (!r.ok) throw new Error("rooms "+r.status);
-    return r.json();
+    const data = await r.json();
+    return data.rooms || [];
   }
   async function apiCreateRoom(name){
     const r = await fetch(`${SITE().apiBase}/chat/rooms`, {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ name: sanitizeRoom(name) })
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      credentials:"include",
+      body: JSON.stringify({ room: sanitizeRoom(name) })
     });
     if (!r.ok) throw new Error("create "+r.status);
-    return (await r.json())?.name || sanitizeRoom(name);
+    const data = await r.json();
+    return data?.room || sanitizeRoom(name);
   }
   async function apiGetMsgs(room){
-    const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {cache:"no-cache"});
+    const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {cache:"no-cache", credentials:"include"});
     if (!r.ok) throw new Error("msgs "+r.status);
     return r.json();
   }
   async function apiPostMsg(room, msg){
     const r = await fetch(`${SITE().apiBase}/chat/rooms/${encodeURIComponent(room)}`, {
-      method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(msg)
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      credentials:"include",
+      body: JSON.stringify({ text: msg.text })
     });
     if (!r.ok) throw new Error("post "+r.status);
   }
