@@ -27,11 +27,13 @@
     </div>
   <script>
     async function load(){
+
       try{
         return (await window.top.loadSettings?.()) || {};
       }catch{
         return {};
       }
+
     }
     async function save(s){
       try{await window.top.saveSettings?.(s);}catch{}
