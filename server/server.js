@@ -46,8 +46,8 @@ const sanitizeRoom = require('./utils/sanitizeRoom');
 const isDev = (req) => req.session?.user?.tier === 'devmode';
 const isLogged = (req) => !!req.session?.user;
 
-// ---------- bootstrap minimal storage ----------
-(async () => {
+// ---------- bootstrap minimal storage and start ----------
+async function start() {
   await ensureDir(DATA_DIR);
   await ensureDir(CHAT_DIR);
   await ensureDir(USER_SETTINGS_DIR);
@@ -62,7 +62,14 @@ const isLogged = (req) => !!req.session?.user;
   if (!fssync.existsSync(path.join(CHAT_DIR, 'public.txt'))) {
     await writeJson(path.join(CHAT_DIR, 'public.txt'), []);
   }
-})().catch(console.error);
+
+  // Listen on all network interfaces to allow external connections
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`API listening on 0.0.0.0:${PORT} (SITE_ROOT=${SITE_ROOT})`);
+  });
+}
+
+start().catch(console.error);
 
 // ---------- health/debug ----------
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
@@ -252,8 +259,3 @@ app.post('/api/chat/rooms/:room', async (req, res) => {
   res.json({ ok: true });
 });
 
-// ---------- start ----------
-// Listen on all network interfaces to allow external connections
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`API listening on 0.0.0.0:${PORT} (SITE_ROOT=${SITE_ROOT})`);
-});
