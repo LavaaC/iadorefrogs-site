@@ -52,8 +52,9 @@
   </div>
 
   <script>
-    // Same-origin with parent, so we can call /api directly and reload top on success
-    async function fetchJSON(u, opt){ const r = await fetch(u, { credentials:'include', ...opt }); if(!r.ok) throw new Error((await r.text())||r.status); return r.json(); }
+    // Same-origin with parent, so we can call the configured API and reload top on success
+    const API = window.top?.API || window.API || '/api';
+    async function fetchJSON(u, opt){ const r = await fetch(`${API}${u}`, { credentials:'include', ...opt }); if(!r.ok) throw new Error((await r.text())||r.status); return r.json(); }
 
     function showPaneFromHash(){
       const hash = window.location.hash === '#create' ? '#create' : '#login';
@@ -65,7 +66,7 @@
 
     async function refreshMe(){
       try{
-        const me = await fetchJSON('/api/me');
+        const me = await fetchJSON('/me');
         const si = document.getElementById('signed-in');
         if (me && me.username){
           document.getElementById('login-pane').style.display='none';
@@ -100,7 +101,7 @@
       const st = document.getElementById('su-status'); st.textContent='';
       if(!u||!p){ st.textContent='Enter username and password.'; return; }
       try{
-        await fetchJSON('/api/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
+        await fetchJSON('/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p})});
         await window.top.auth.login(u,p);
         refreshMe();
         window.top.WM?.close('auth');
