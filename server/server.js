@@ -5,7 +5,7 @@ const fs = require('fs/promises');
 const fssync = require('fs');
 const path = require('path');
 
-const SITE_ROOT = process.env.SITE_ROOT || '/home/lavaa/iadorefrogs-site';
+const SITE_ROOT = process.env.SITE_ROOT || path.resolve(__dirname, '..');
 const PORT = Number(process.env.PORT || 3000);
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret';
 const NODE_ENV = process.env.NODE_ENV || 'production';
