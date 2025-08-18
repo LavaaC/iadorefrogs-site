@@ -253,6 +253,7 @@ app.post('/api/chat/rooms/:room', async (req, res) => {
 });
 
 // ---------- start ----------
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`API listening on 127.0.0.1:${PORT} (SITE_ROOT=${SITE_ROOT})`);
+// Listen on all network interfaces to allow external connections
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`API listening on 0.0.0.0:${PORT} (SITE_ROOT=${SITE_ROOT})`);
 });
