@@ -88,6 +88,13 @@
     document.addEventListener('click', () => menu.classList.add('hidden'));
   }
 
+  window.addEventListener('auth:me', () => {
+    const chrome = ensureChrome();
+    if (!chrome) return;
+    const { menu } = chrome;
+    if (!menu.classList.contains('hidden')) buildMenu(menu);
+  });
+
   window.addEventListener('auth:me', wire);
   document.addEventListener('DOMContentLoaded', wire);
 })();
